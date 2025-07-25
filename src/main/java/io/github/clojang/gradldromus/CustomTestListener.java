@@ -116,7 +116,7 @@ public class CustomTestListener implements TestListener {
         }
         nameLength += methodName.length() + 1;
         int dotsNeeded = Math.max(1, 65 - nameLength);
-        outputStr.append(colors.colorize(".".repeat(dotsNeeded), WHITE));
+        outputStr.append(colors.colorize(".".repeat(dotsNeeded), BRIGHT_BLACK));
         
         // Status in brackets
         String symbol;
@@ -151,6 +151,9 @@ public class CustomTestListener implements TestListener {
         
         // Print with synchronization to avoid interleaving
         synchronized (output) {
+            output.print("\r"); // Move to start of line
+            output.print(" ".repeat(getTerminalWidth())); // Overwrite with spaces (adjust length as needed)
+            output.print("\r"); // Move to start again
             output.println(outputStr.toString());
             
             // Print failure details on the next line(s) if needed
@@ -161,7 +164,23 @@ public class CustomTestListener implements TestListener {
             }
         }
     }
-    
+
+    public static int getTerminalWidth() {
+        try {
+            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "tput cols"});
+            process.waitFor();
+            Scanner scanner = new Scanner(process.getInputStream());
+            if (scanner.hasNext()) {
+                String colsStr = scanner.next().trim();
+                return Integer.parseInt(colsStr);
+            }
+        } catch (Exception e) {
+            Logger logger = Logging.getLogger(CustomTestListener.class);
+            logger.warn("Could not determine terminal width, using default: 80", e);
+        }
+        return 80; // Default width for overwriting text
+    }
+
     public void printFinalSummary() {
         long totalTime = System.currentTimeMillis() - globalStartTime.get();
         
