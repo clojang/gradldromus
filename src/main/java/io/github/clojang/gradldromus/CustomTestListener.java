@@ -97,8 +97,8 @@ public class CustomTestListener implements TestListener {
     private void printTestResult(String className, String methodName, TestResult result) {
         StringBuilder outputStr = new StringBuilder();
         
-        // Two space indent
-        outputStr.append("  ");
+        // Indent
+        outputStr.append("    ");
         
         // Class name (light gray/white)
         if (className != null) {
@@ -115,7 +115,7 @@ public class CustomTestListener implements TestListener {
             nameLength += className.substring(className.lastIndexOf('.') + 1).length() + 1;
         }
         nameLength += methodName.length() + 1;
-        int dotsNeeded = Math.max(1, 65 - nameLength);
+        int dotsNeeded = Math.max(1, 68 - nameLength); // 68 tends to give most results in under 80 characters
         outputStr.append(colors.colorize(".".repeat(dotsNeeded), BRIGHT_BLACK));
         
         // Status in brackets
@@ -139,9 +139,9 @@ public class CustomTestListener implements TestListener {
                 symbolColor = YELLOW;
         }
         
-        outputStr.append(colors.colorize("[", WHITE));
+        //outputStr.append(colors.colorize("[", WHITE));
         outputStr.append(colors.colorize(symbol, symbolColor));
-        outputStr.append(colors.colorize("]", WHITE));
+        //outputStr.append(colors.colorize("]", WHITE));
         
         // Timing (dark gray)
         if (extension.isShowTimings()) {
@@ -165,15 +165,33 @@ public class CustomTestListener implements TestListener {
         }
     }
 
-    public static int getTerminalWidth() {
+    public int getTerminalWidth() {
+        // Check extension property first (if available)
+        int configuredWidth = this.extension.getTerminalWidth();
+        if (configuredWidth > 0) {
+            //System.err.println("Detected terminal width from extension: " + configuredWidth);
+            return configuredWidth;
+        }
+        // Try environment variable
+        String columnsEnv = System.getenv("COLUMNS");
+        if (columnsEnv != null) {
+            try {
+                int width = Integer.parseInt(columnsEnv.trim());
+                //System.err.println("Detected terminal width from COLUMNS: " + width);
+                return width;
+            } catch (NumberFormatException ignored) {}
+        }
+        // Try tput
         try {
             Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "tput cols"});
             process.waitFor();
             Scanner scanner = new Scanner(process.getInputStream());
             if (scanner.hasNext()) {
                 String colsStr = scanner.next().trim();
-                return Integer.parseInt(colsStr);
-            }
+                //int width = Integer.parseInt(colsStr);
+                //System.err.println("Detected terminal width from 'tput cols': " + width);
+                //return width;
+                return Integer.parseInt(colsStr);}
         } catch (Exception e) {
             Logger logger = Logging.getLogger(CustomTestListener.class);
             logger.warn("Could not determine terminal width, using default: 80", e);

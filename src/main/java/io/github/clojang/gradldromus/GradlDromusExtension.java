@@ -8,9 +8,10 @@ public class GradlDromusExtension {
     public boolean useColors = true;
     public boolean showStandardStreams = false;
     public boolean suppressGradleOutput = false; // New option
-    public String passSymbol = "✓";
-    public String failSymbol = "✗";
-    public String skipSymbol = "○";
+    public int terminalWidth = 80; // Default terminal width
+    public String passSymbol = "💚";
+    public String failSymbol = "💔";
+    public String skipSymbol = "💤";
     
     // Keep getters for Java compatibility and internal use
     public boolean isShowModuleNames() {
@@ -60,7 +61,15 @@ public class GradlDromusExtension {
     public void setSuppressGradleOutput(boolean suppressGradleOutput) {
         this.suppressGradleOutput = suppressGradleOutput;
     }
-    
+
+    public void setTerminalWidth(int terminalWidth) {
+        this.terminalWidth = terminalWidth;
+    }
+
+    public int getTerminalWidth() {
+        return terminalWidth;
+    }
+
     public String getPassSymbol() {
         return passSymbol;
     }
