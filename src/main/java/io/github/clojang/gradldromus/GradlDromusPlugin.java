@@ -1,5 +1,6 @@
 package io.github.clojang.gradldromus;
 
+import java.io.IOException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.testing.Test;
@@ -12,26 +13,55 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.configuration.ConsoleOutput;
 
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.github.clojang.gradldromus.AnsiColors.*;
 
 public class GradlDromusPlugin implements Plugin<Project> {
     // Use a map to track listeners per root project
     private static final Map<Project, CustomTestListener> listeners = new ConcurrentHashMap<>();
-    
+
     @Override
     public void apply(Project project) {
         // Create extension for configuration
         GradlDromusExtension extension = project.getExtensions()
             .create("gradldromus", GradlDromusExtension.class);
-        
+        AnsiColors colors = new AnsiColors(extension.isUseColors());
         Project rootProject = project.getRootProject();
         
         // Get or create the listener for this root project
         CustomTestListener listener = listeners.computeIfAbsent(rootProject, p -> {
             CustomTestListener newListener = new CustomTestListener(p, extension);
-            
+
+            // Add a projects evaluated listener to print a greeting message
+            p.getGradle().projectsEvaluated(result -> {
+                // Write a greeting message
+                Properties props = new Properties();
+                System.out.println("\n" + colors.colorize("=".repeat(78), BRIGHT_GREEN));
+                System.out.println(colors.colorize("Running tests with ", GREEN));
+                try (InputStream in = getClass().getResourceAsStream("/io/github/clojang/gradldromus/plugin.properties")) {
+                    if (in != null) {
+                        try {
+                            props.load(in);
+                            System.out.print(colors.colorize(
+                                    props.getProperty("plugin.name") +
+                                    " (version: " + props.getProperty("plugin.version") + ")", GREEN));
+                            System.err.println("Running tests with " + props.getProperty("plugin.name") +
+                                    " (version: " + props.getProperty("plugin.version") + ")");
+                        } catch (IOException e) {
+                            System.err.println("Failed to load plugin properties: " + e.getMessage());
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("Failed to read plugin properties: " + e.getMessage());
+                }
+                System.out.println(colors.colorize("-".repeat(78), BRIGHT_GREEN));
+            });
+
             // Add a build finished listener to print the final summary
             p.getGradle().buildFinished(result -> {
                 CustomTestListener l = listeners.get(p);
@@ -40,7 +70,7 @@ public class GradlDromusPlugin implements Plugin<Project> {
                 }
                 listeners.remove(p); // Clean up
             });
-            
+
             return newListener;
         });
         
@@ -68,6 +98,7 @@ public class GradlDromusPlugin implements Plugin<Project> {
             });
             
             testTask.doLast(task -> {
+                System.out.println("\n" + colors.colorize("-".repeat(78), BRIGHT_BLACK));
                 // Restore original log level
                 LogLevel originalLevel = (LogLevel) task.getExtensions().getExtraProperties().get("originalLogLevel");
                 project.getGradle().getStartParameter().setLogLevel(originalLevel);

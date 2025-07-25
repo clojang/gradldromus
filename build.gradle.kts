@@ -24,6 +24,12 @@ gradlePlugin {
     }
 }
 
+tasks.processResources {
+    filesMatching("io/github/clojang/gradldromus/plugin.properties") {
+        expand("version" to project.version)
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {

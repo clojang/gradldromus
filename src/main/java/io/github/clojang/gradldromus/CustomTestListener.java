@@ -115,7 +115,7 @@ public class CustomTestListener implements TestListener {
             nameLength += className.substring(className.lastIndexOf('.') + 1).length() + 1;
         }
         nameLength += methodName.length() + 1;
-        int dotsNeeded = Math.max(1, 68 - nameLength); // 68 tends to give most results in under 80 characters
+        int dotsNeeded = Math.max(1, 74 - nameLength); // this tends to give most results in under 80 characters
         outputStr.append(colors.colorize(".".repeat(dotsNeeded), BRIGHT_BLACK));
         
         // Status in brackets
@@ -221,6 +221,8 @@ public class CustomTestListener implements TestListener {
             } else {
                 output.println("\n" + colors.colorize("❌ Some tests failed.", BRIGHT_RED));
             }
+
+            output.println(colors.colorize("\n" + "=".repeat(78), BRIGHT_GREEN) + "\n");
         }
     }
 }
