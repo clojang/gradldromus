@@ -6,6 +6,8 @@ public class GradlDromusExtension {
     public boolean showMethodNames = true;
     public boolean showTimings = true;
     public boolean useColors = true;
+    public boolean showStandardStreams = false;
+    public boolean suppressGradleOutput = false; // New option
     public String passSymbol = "✓";
     public String failSymbol = "✗";
     public String skipSymbol = "○";
@@ -41,6 +43,22 @@ public class GradlDromusExtension {
     
     public void setUseColors(boolean useColors) {
         this.useColors = useColors;
+    }
+    
+    public boolean isShowStandardStreams() {
+        return showStandardStreams;
+    }
+    
+    public void setShowStandardStreams(boolean showStandardStreams) {
+        this.showStandardStreams = showStandardStreams;
+    }
+    
+    public boolean isSuppressGradleOutput() {
+        return suppressGradleOutput;
+    }
+    
+    public void setSuppressGradleOutput(boolean suppressGradleOutput) {
+        this.suppressGradleOutput = suppressGradleOutput;
     }
     
     public String getPassSymbol() {

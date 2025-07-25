@@ -2,50 +2,72 @@ package io.github.clojang.gradldromus;
 
 import org.gradle.api.Project;
 import org.gradle.api.tasks.testing.*;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.io.PrintStream;
+
+import static io.github.clojang.gradldromus.AnsiColors.*;
 
 public class CustomTestListener implements TestListener {
     private final Project project;
     private final GradlDromusExtension extension;
-    private final Map<String, ModuleResults> moduleResults = new LinkedHashMap<>();
-    private long suiteStartTime;
+    private final AnsiColors colors;
+    private final PrintStream output;
     
-    // ANSI color codes
-    private static final String RESET = "\u001B[0m";
-    private static final String GREEN = "\u001B[32m";
-    private static final String RED = "\u001B[31m";
-    private static final String YELLOW = "\u001B[33m";
-    private static final String BLUE = "\u001B[34m";
-    private static final String GRAY = "\u001B[90m";
+    // Thread-safe tracking of current task paths
+    private final Map<String, Boolean> taskHeadersPrinted = new ConcurrentHashMap<>();
+    private final ThreadLocal<String> currentTaskPath = new ThreadLocal<>();
+    
+    // Global statistics (thread-safe)
+    private final AtomicLong globalStartTime = new AtomicLong(0);
+    private final AtomicInteger totalTests = new AtomicInteger(0);
+    private final AtomicInteger totalPassed = new AtomicInteger(0);
+    private final AtomicInteger totalFailed = new AtomicInteger(0);
+    private final AtomicInteger totalSkipped = new AtomicInteger(0);
     
     public CustomTestListener(Project project, GradlDromusExtension extension) {
         this.project = project;
         this.extension = extension;
+        this.colors = new AnsiColors(extension.isUseColors());
+        // Always use System.out directly to bypass Gradle's logging
+        this.output = System.out;
+    }
+    
+    public boolean hasTests() {
+        return totalTests.get() > 0;
+    }
+    
+    public void setCurrentTaskPath(String taskPath) {
+        currentTaskPath.set(taskPath);
     }
     
     @Override
     public void beforeSuite(TestDescriptor suite) {
         if (suite.getParent() == null) {
-            suiteStartTime = System.currentTimeMillis();
-            println("\n" + color(BLUE, "Running tests...") + "\n");
+            // This is the root test suite
+            globalStartTime.compareAndSet(0, System.currentTimeMillis());
         }
     }
     
     @Override
     public void afterSuite(TestDescriptor suite, TestResult result) {
-        if (suite.getParent() == null) {
-            // Print final summary
-            printSummary(result);
-        }
+        // No per-suite summaries
     }
     
     @Override
     public void beforeTest(TestDescriptor testDescriptor) {
-        // Track module if needed
-        String className = testDescriptor.getClassName();
-        if (className != null && extension.isShowModuleNames()) {
-            moduleResults.computeIfAbsent(className, k -> new ModuleResults(k));
+        String taskPath = currentTaskPath.get();
+        
+        // Print the module header if not already printed for this task
+        if (taskPath != null && taskHeadersPrinted.putIfAbsent(taskPath, Boolean.TRUE) == null) {
+            synchronized (output) {
+                output.println(colors.colorize(taskPath, BOLD, BRIGHT_YELLOW));
+            }
         }
     }
     
@@ -54,31 +76,59 @@ public class CustomTestListener implements TestListener {
         String className = testDescriptor.getClassName();
         String methodName = testDescriptor.getName();
         
-        if (className != null) {
-            ModuleResults module = moduleResults.get(className);
-            if (module != null) {
-                module.addTest(methodName, result);
-            }
+        // Update global totals
+        totalTests.incrementAndGet();
+        switch (result.getResultType()) {
+            case SUCCESS:
+                totalPassed.incrementAndGet();
+                break;
+            case FAILURE:
+                totalFailed.incrementAndGet();
+                break;
+            case SKIPPED:
+                totalSkipped.incrementAndGet();
+                break;
         }
         
-        // Print immediate feedback
+        // Format and print the test result
         printTestResult(className, methodName, result);
     }
     
     private void printTestResult(String className, String methodName, TestResult result) {
-        StringBuilder output = new StringBuilder();
+        StringBuilder outputStr = new StringBuilder();
         
-        // Status symbol
+        // Two space indent
+        outputStr.append("  ");
+        
+        // Class name (light gray/white)
+        if (className != null) {
+            String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
+            outputStr.append(colors.colorize(simpleClassName + ".", WHITE));
+        }
+        
+        // Method name (light gray/white)
+        outputStr.append(colors.colorize(methodName + " ", WHITE));
+        
+        // Calculate dots needed
+        int nameLength = 2; // indent
+        if (className != null) {
+            nameLength += className.substring(className.lastIndexOf('.') + 1).length() + 1;
+        }
+        nameLength += methodName.length() + 1;
+        int dotsNeeded = Math.max(1, 65 - nameLength);
+        outputStr.append(colors.colorize(".".repeat(dotsNeeded), WHITE));
+        
+        // Status in brackets
         String symbol;
         String symbolColor;
         switch (result.getResultType()) {
             case SUCCESS:
                 symbol = extension.getPassSymbol();
-                symbolColor = GREEN;
+                symbolColor = BOLD + BRIGHT_GREEN;
                 break;
             case FAILURE:
                 symbol = extension.getFailSymbol();
-                symbolColor = RED;
+                symbolColor = BOLD + BRIGHT_RED;
                 break;
             case SKIPPED:
                 symbol = extension.getSkipSymbol();
@@ -86,98 +136,54 @@ public class CustomTestListener implements TestListener {
                 break;
             default:
                 symbol = "?";
-                symbolColor = GRAY;
+                symbolColor = WHITE;
         }
         
-        output.append(color(symbolColor, symbol)).append(" ");
+        outputStr.append(colors.colorize("[", WHITE));
+        outputStr.append(colors.colorize(symbol, symbolColor));
+        outputStr.append(colors.colorize("]", WHITE));
         
-        // Module/Class name
-        if (extension.isShowModuleNames() && className != null) {
-            String simpleClassName = className.substring(className.lastIndexOf('.') + 1);
-            output.append(color(GRAY, simpleClassName)).append(".");
-        }
-        
-        // Method name
-        if (extension.isShowMethodNames()) {
-            output.append(methodName);
-        }
-        
-        // Timing
+        // Timing (dark gray)
         if (extension.isShowTimings()) {
             long duration = result.getEndTime() - result.getStartTime();
-            output.append(color(GRAY, " (" + duration + "ms)"));
+            outputStr.append(" ").append(colors.colorize("(" + duration + "ms)", BRIGHT_BLACK));
         }
         
-        println(output.toString());
-        
-        // Print failure details
-        if (result.getResultType() == TestResult.ResultType.FAILURE) {
-            for (Throwable exception : result.getExceptions()) {
-                println(color(RED, "  → " + exception.getMessage()));
+        // Print with synchronization to avoid interleaving
+        synchronized (output) {
+            output.println(outputStr.toString());
+            
+            // Print failure details on the next line(s) if needed
+            if (result.getResultType() == TestResult.ResultType.FAILURE) {
+                for (Throwable exception : result.getExceptions()) {
+                    output.println(colors.colorize("    → " + exception.getMessage(), RED));
+                }
             }
         }
     }
     
-    private void printSummary(TestResult result) {
-        println("\n" + color(BLUE, "Test Summary:"));
-        println(color(BLUE, "─────────────"));
+    public void printFinalSummary() {
+        long totalTime = System.currentTimeMillis() - globalStartTime.get();
         
-        long totalTime = System.currentTimeMillis() - suiteStartTime;
-        
-        String summaryColor = result.getResultType() == TestResult.ResultType.SUCCESS ? GREEN : RED;
-        
-        println(String.format("%s %d tests, %s %d passed, %s %d failed, %s %d skipped",
-            color(GRAY, "Total:"),
-            result.getTestCount(),
-            color(GREEN, extension.getPassSymbol()),
-            result.getSuccessfulTestCount(),
-            color(RED, extension.getFailSymbol()),
-            result.getFailedTestCount(),
-            color(YELLOW, extension.getSkipSymbol()),
-            result.getSkippedTestCount()
-        ));
-        
-        println(color(GRAY, "Time: ") + (totalTime / 1000.0) + "s");
-        
-        if (result.getResultType() == TestResult.ResultType.SUCCESS) {
-            println("\n" + color(GREEN, "✨ All tests passed!"));
-        } else {
-            println("\n" + color(RED, "❌ Some tests failed."));
-        }
-    }
-    
-    private String color(String ansiColor, String text) {
-        if (extension.isUseColors()) {
-            return ansiColor + text + RESET;
-        }
-        return text;
-    }
-    
-    private void println(String message) {
-        System.out.println(message);
-    }
-    
-    // Inner class to track module results
-    private static class ModuleResults {
-        private final String moduleName;
-        private final List<TestInfo> tests = new ArrayList<>();
-        
-        ModuleResults(String moduleName) {
-            this.moduleName = moduleName;
-        }
-        
-        void addTest(String methodName, TestResult result) {
-            tests.add(new TestInfo(methodName, result));
-        }
-    }
-    
-    private static class TestInfo {
-        final String methodName;
-        final TestResult result;
-        
-        TestInfo(String methodName, TestResult result) {
-            this.methodName = methodName;
-            this.result = result;
+        synchronized (output) {
+            output.println("\n" + colors.colorize("Test Summary:", BLUE));
+            output.println(colors.colorize("─────────────", BLUE));
+            
+            StringBuilder summary = new StringBuilder();
+            summary.append(colors.colorize("Total: " + totalTests.get() + " tests, ", WHITE));
+            summary.append(colors.colorize(extension.getPassSymbol() + " " + totalPassed.get() + " passed, ", GREEN));
+            summary.append(colors.colorize(extension.getFailSymbol() + " " + totalFailed.get() + " failed, ", RED));
+            summary.append(colors.colorize(extension.getSkipSymbol() + " " + totalSkipped.get() + " skipped", YELLOW));
+            
+            output.println(summary.toString());
+            
+            output.println(colors.colorize("Time: ", WHITE) + (totalTime / 1000.0) + "s");
+            
+            if (totalFailed.get() == 0) {
+                output.println("\n" + colors.colorize("✨ All tests passed!", BRIGHT_GREEN));
+            } else {
+                output.println("\n" + colors.colorize("❌ Some tests failed.", BRIGHT_RED));
+            }
         }
     }
 }
