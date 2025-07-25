@@ -107,7 +107,7 @@ public class CustomTestListener implements TestListener {
         }
         
         // Method name (light gray/white)
-        outputStr.append(colors.colorize(methodName + " ", WHITE));
+        outputStr.append(colors.colorize(methodName + " ", YELLOW));
         
         // Calculate dots needed
         int nameLength = 2; // indent
@@ -132,11 +132,11 @@ public class CustomTestListener implements TestListener {
                 break;
             case SKIPPED:
                 symbol = extension.getSkipSymbol();
-                symbolColor = YELLOW;
+                symbolColor = BOLD + BRIGHT_CYAN;
                 break;
             default:
                 symbol = "?";
-                symbolColor = WHITE;
+                symbolColor = YELLOW;
         }
         
         outputStr.append(colors.colorize("[", WHITE));
@@ -154,7 +154,7 @@ public class CustomTestListener implements TestListener {
             output.print("\r"); // Move to start of line
             output.print(" ".repeat(getTerminalWidth())); // Overwrite with spaces (adjust length as needed)
             output.print("\r"); // Move to start again
-            output.println(outputStr.toString());
+            output.println(outputStr);
             
             // Print failure details on the next line(s) if needed
             if (result.getResultType() == TestResult.ResultType.FAILURE) {
@@ -192,7 +192,7 @@ public class CustomTestListener implements TestListener {
             summary.append(colors.colorize("Total: " + totalTests.get() + " tests, ", WHITE));
             summary.append(colors.colorize(extension.getPassSymbol() + " " + totalPassed.get() + " passed, ", GREEN));
             summary.append(colors.colorize(extension.getFailSymbol() + " " + totalFailed.get() + " failed, ", RED));
-            summary.append(colors.colorize(extension.getSkipSymbol() + " " + totalSkipped.get() + " skipped", YELLOW));
+            summary.append(colors.colorize(extension.getSkipSymbol() + " " + totalSkipped.get() + " skipped", CYAN));
             
             output.println(summary.toString());
             
