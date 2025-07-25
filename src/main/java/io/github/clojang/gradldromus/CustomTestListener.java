@@ -17,6 +17,7 @@ public class CustomTestListener implements TestListener {
     private final Project project;
     private final GradlDromusExtension extension;
     private final AnsiColors colors;
+    private final CleanTerminalPrinter printer;
     private final PrintStream output;
     
     // Thread-safe tracking of current task paths
@@ -34,6 +35,7 @@ public class CustomTestListener implements TestListener {
         this.project = project;
         this.extension = extension;
         this.colors = new AnsiColors(extension.isUseColors());
+        this.printer = new CleanTerminalPrinter(extension);
         // Always use System.out directly to bypass Gradle's logging
         this.output = System.out;
     }
@@ -65,9 +67,7 @@ public class CustomTestListener implements TestListener {
         
         // Print the module header if not already printed for this task
         if (taskPath != null && taskHeadersPrinted.putIfAbsent(taskPath, Boolean.TRUE) == null) {
-            synchronized (output) {
-                output.println(colors.colorize(taskPath, BOLD, BRIGHT_YELLOW));
-            }
+            printer.println(output, colors.colorize(taskPath, BOLD, BRIGHT_YELLOW));
         }
     }
     
@@ -139,9 +139,7 @@ public class CustomTestListener implements TestListener {
                 symbolColor = YELLOW;
         }
         
-        //outputStr.append(colors.colorize("[", WHITE));
         outputStr.append(colors.colorize(symbol, symbolColor));
-        //outputStr.append(colors.colorize("]", WHITE));
         
         // Timing (dark gray)
         if (extension.isShowTimings()) {
@@ -149,80 +147,39 @@ public class CustomTestListener implements TestListener {
             outputStr.append(" ").append(colors.colorize("(" + duration + "ms)", BRIGHT_BLACK));
         }
         
-        // Print with synchronization to avoid interleaving
-        synchronized (output) {
-            output.print("\r"); // Move to start of line
-            output.print(" ".repeat(getTerminalWidth())); // Overwrite with spaces (adjust length as needed)
-            output.print("\r"); // Move to start again
-            output.println(outputStr);
-            
-            // Print failure details on the next line(s) if needed
-            if (result.getResultType() == TestResult.ResultType.FAILURE) {
-                for (Throwable exception : result.getExceptions()) {
-                    output.println(colors.colorize("    → " + exception.getMessage(), RED));
-                }
+        // Print the test result using clean printer
+        printer.println(output, outputStr.toString());
+        
+        // Print failure details on the next line(s) if needed
+        if (result.getResultType() == TestResult.ResultType.FAILURE) {
+            for (Throwable exception : result.getExceptions()) {
+                printer.println(output, colors.colorize("    → " + exception.getMessage(), RED));
             }
         }
-    }
-
-    public int getTerminalWidth() {
-        // Check extension property first (if available)
-        int configuredWidth = this.extension.getTerminalWidth();
-        if (configuredWidth > 0) {
-            //System.err.println("Detected terminal width from extension: " + configuredWidth);
-            return configuredWidth;
-        }
-        // Try environment variable
-        String columnsEnv = System.getenv("COLUMNS");
-        if (columnsEnv != null) {
-            try {
-                int width = Integer.parseInt(columnsEnv.trim());
-                //System.err.println("Detected terminal width from COLUMNS: " + width);
-                return width;
-            } catch (NumberFormatException ignored) {}
-        }
-        // Try tput
-        try {
-            Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "tput cols"});
-            process.waitFor();
-            Scanner scanner = new Scanner(process.getInputStream());
-            if (scanner.hasNext()) {
-                String colsStr = scanner.next().trim();
-                //int width = Integer.parseInt(colsStr);
-                //System.err.println("Detected terminal width from 'tput cols': " + width);
-                //return width;
-                return Integer.parseInt(colsStr);}
-        } catch (Exception e) {
-            Logger logger = Logging.getLogger(CustomTestListener.class);
-            logger.warn("Could not determine terminal width, using default: 80", e);
-        }
-        return 80; // Default width for overwriting text
     }
 
     public void printFinalSummary() {
         long totalTime = System.currentTimeMillis() - globalStartTime.get();
         
-        synchronized (output) {
-            output.println("\n" + colors.colorize("Test Summary:", BLUE));
-            output.println(colors.colorize("─────────────", BLUE));
-            
-            StringBuilder summary = new StringBuilder();
-            summary.append(colors.colorize("Total: " + totalTests.get() + " tests, ", WHITE));
-            summary.append(colors.colorize(extension.getPassSymbol() + " " + totalPassed.get() + " passed, ", GREEN));
-            summary.append(colors.colorize(extension.getFailSymbol() + " " + totalFailed.get() + " failed, ", RED));
-            summary.append(colors.colorize(extension.getSkipSymbol() + " " + totalSkipped.get() + " skipped", CYAN));
-            
-            output.println(summary.toString());
-            
-            output.println(colors.colorize("Time: ", WHITE) + (totalTime / 1000.0) + "s");
-            
-            if (totalFailed.get() == 0) {
-                output.println("\n" + colors.colorize("✨ All tests passed!", BRIGHT_GREEN));
-            } else {
-                output.println("\n" + colors.colorize("❌ Some tests failed.", BRIGHT_RED));
-            }
-
-            output.println(colors.colorize("\n" + "=".repeat(78), BRIGHT_GREEN) + "\n");
+        printer.println(output, "\n" + colors.colorize("Test Summary:", BLUE));
+        printer.println(output, colors.colorize("─────────────", BLUE));
+        
+        StringBuilder summary = new StringBuilder();
+        summary.append(colors.colorize("Total: " + totalTests.get() + " tests, ", WHITE));
+        summary.append(colors.colorize(extension.getPassSymbol() + " " + totalPassed.get() + " passed, ", GREEN));
+        summary.append(colors.colorize(extension.getFailSymbol() + " " + totalFailed.get() + " failed, ", RED));
+        summary.append(colors.colorize(extension.getSkipSymbol() + " " + totalSkipped.get() + " skipped", CYAN));
+        
+        printer.println(output, summary.toString());
+        
+        printer.println(output, colors.colorize("Time: ", WHITE) + (totalTime / 1000.0) + "s");
+        
+        if (totalFailed.get() == 0) {
+            printer.println(output, "\n" + colors.colorize("✨ All tests passed!", BRIGHT_GREEN));
+        } else {
+            printer.println(output, "\n" + colors.colorize("❌ Some tests failed.", BRIGHT_RED));
         }
+
+        printer.println(output, colors.colorize("\n" + "=".repeat(78), BRIGHT_GREEN) + "\n");
     }
 }

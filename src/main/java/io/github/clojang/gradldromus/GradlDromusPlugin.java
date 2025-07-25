@@ -14,6 +14,7 @@ import org.gradle.api.logging.LogLevel;
 import org.gradle.api.logging.configuration.ConsoleOutput;
 
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -31,7 +32,9 @@ public class GradlDromusPlugin implements Plugin<Project> {
         GradlDromusExtension extension = project.getExtensions()
             .create("gradldromus", GradlDromusExtension.class);
         AnsiColors colors = new AnsiColors(extension.isUseColors());
+        CleanTerminalPrinter printer = new CleanTerminalPrinter(extension);
         Project rootProject = project.getRootProject();
+        PrintStream output = System.out;
         
         // Get or create the listener for this root project
         CustomTestListener listener = listeners.computeIfAbsent(rootProject, p -> {
@@ -41,27 +44,41 @@ public class GradlDromusPlugin implements Plugin<Project> {
             p.getGradle().projectsEvaluated(result -> {
                 // Write a greeting message
                 Properties props = new Properties();
-                System.out.println("\n" + colors.colorize("=".repeat(78), BRIGHT_GREEN));
-                System.out.print(colors.colorize("Running tests with ", GREEN));
+                printer.println(output, "\n" + colors.colorize("=".repeat(78), BRIGHT_GREEN));
                 
-                // Try to load plugin properties from the correct path
-                try (InputStream in = getClass().getResourceAsStream("/io/github/clojang/gradldromus/plugin.properties")) {
-                    if (in != null) {
-                        props.load(in);
-                        String pluginName = props.getProperty("plugin.name", "GradlDromus");
-                        String pluginVersion = props.getProperty("plugin.version", "unknown");
-                        System.out.println(colors.colorize(pluginName + " (version: " + pluginVersion + ")", GREEN));
-                    } else {
-                        // Fallback if properties file not found
-                        System.out.println(colors.colorize("GradlDromus", GREEN));
+                // Try multiple locations for the properties file
+                String[] possiblePaths = {
+                    "/io/github/clojang/gradldromus/plugin.properties",
+                    "/plugin.properties",
+                    "plugin.properties"
+                };
+
+                boolean loaded = false;
+                for (String path : possiblePaths) {
+                    try (InputStream in = getClass().getResourceAsStream(path)) {
+                        if (in != null) {
+                            props.load(in);
+                            String pluginName = props.getProperty("plugin.name", "GradlDromus");
+                            String pluginVersion = props.getProperty("plugin.version", "unknown");
+                            printer.println(output, colors.colorize("Running tests with " + pluginName + " (version: " + pluginVersion + ")", GREEN));
+                            //System.err.println("Running tests with " + pluginName + " (version: " + pluginVersion + ") [loaded from: " + path + "]");
+                            loaded = true;
+                            break;
+                        }
+                    } catch (IOException e) {
+                        // Continue to next path
                     }
-                } catch (IOException e) {
-                    // Fallback on error
-                    System.out.println(colors.colorize("GradlDromus", GREEN));
-                    System.err.println("Failed to load plugin properties: " + e.getMessage());
+                }
+
+                if (!loaded) {
+                    // Fallback - get version from manifest or use default
+                    Package pkg = getClass().getPackage();
+                    String version = pkg != null ? pkg.getImplementationVersion() : "unknown";
+                    printer.println(output, colors.colorize("Running tests with GradlDromus (version: " + version + ")", GREEN));
+                    //System.err.println("Running tests with GradlDromus (version: " + version + ") [properties file not found]");
                 }
                 
-                System.out.println(colors.colorize("-".repeat(78) + "\n", BRIGHT_GREEN));
+                printer.println(output, colors.colorize("-".repeat(78), BRIGHT_GREEN));
             });
 
             // Add a build finished listener to print the final summary
@@ -100,7 +117,7 @@ public class GradlDromusPlugin implements Plugin<Project> {
             });
             
             testTask.doLast(task -> {
-                System.out.println("\n" + colors.colorize("-".repeat(78), BRIGHT_BLACK));
+                printer.println(output, "\n" + colors.colorize("-".repeat(78), BRIGHT_BLACK));
                 // Restore original log level
                 LogLevel originalLevel = (LogLevel) task.getExtensions().getExtraProperties().get("originalLogLevel");
                 project.getGradle().getStartParameter().setLogLevel(originalLevel);
