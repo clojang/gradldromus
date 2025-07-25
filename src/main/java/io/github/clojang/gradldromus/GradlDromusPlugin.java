@@ -42,24 +42,26 @@ public class GradlDromusPlugin implements Plugin<Project> {
                 // Write a greeting message
                 Properties props = new Properties();
                 System.out.println("\n" + colors.colorize("=".repeat(78), BRIGHT_GREEN));
-                System.out.println(colors.colorize("Running tests with ", GREEN));
+                System.out.print(colors.colorize("Running tests with ", GREEN));
+                
+                // Try to load plugin properties from the correct path
                 try (InputStream in = getClass().getResourceAsStream("/io/github/clojang/gradldromus/plugin.properties")) {
                     if (in != null) {
-                        try {
-                            props.load(in);
-                            System.out.print(colors.colorize(
-                                    props.getProperty("plugin.name") +
-                                    " (version: " + props.getProperty("plugin.version") + ")", GREEN));
-                            System.err.println("Running tests with " + props.getProperty("plugin.name") +
-                                    " (version: " + props.getProperty("plugin.version") + ")");
-                        } catch (IOException e) {
-                            System.err.println("Failed to load plugin properties: " + e.getMessage());
-                        }
+                        props.load(in);
+                        String pluginName = props.getProperty("plugin.name", "GradlDromus");
+                        String pluginVersion = props.getProperty("plugin.version", "unknown");
+                        System.out.println(colors.colorize(pluginName + " (version: " + pluginVersion + ")", GREEN));
+                    } else {
+                        // Fallback if properties file not found
+                        System.out.println(colors.colorize("GradlDromus", GREEN));
                     }
                 } catch (IOException e) {
-                    System.err.println("Failed to read plugin properties: " + e.getMessage());
+                    // Fallback on error
+                    System.out.println(colors.colorize("GradlDromus", GREEN));
+                    System.err.println("Failed to load plugin properties: " + e.getMessage());
                 }
-                System.out.println(colors.colorize("-".repeat(78), BRIGHT_GREEN));
+                
+                System.out.println(colors.colorize("-".repeat(78) + "\n", BRIGHT_GREEN));
             });
 
             // Add a build finished listener to print the final summary
