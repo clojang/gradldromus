@@ -2,12 +2,15 @@ import org.gradle.api.plugins.quality.CheckstyleExtension
 
 plugins {
     id("java")
+    id("java-library")
     id("maven-publish")
+    id("signing")
     id("java-gradle-plugin")
     id("checkstyle")
     id("org.sonarqube")
     id("com.github.ben-manes.versions")
     id("org.owasp.dependencycheck")
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
 }
 
 group = "io.github.clojang"
@@ -88,6 +91,25 @@ tasks.processResources {
     }
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// Configure Nexus publishing for Maven Central
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(System.getenv("SONATYPE_USERNAME"))
+            password.set(System.getenv("SONATYPE_PASSWORD"))
+        }
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {
@@ -96,13 +118,61 @@ publishing {
             version = project.version.toString()
             
             from(components["java"])
+            
+            pom {
+                name.set("GradlDromus")
+                description.set("A Gradle plugin for GradlDromus functionality")
+                url.set("https://github.com/clojang/gradldromus")
+                
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id.set("clojang")
+                        name.set("Clojang Team")
+                        email.set("team@clojang.io")
+                    }
+                }
+                
+                scm {
+                    connection.set("scm:git:git://github.com/clojang/gradldromus.git")
+                    developerConnection.set("scm:git:ssh://github.com:clojang/gradldromus.git")
+                    url.set("https://github.com/clojang/gradldromus/tree/main")
+                }
+            }
+        }
+    }
+    
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/clojang/gradldromus")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
         }
     }
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+// Configure signing
+signing {
+    val signingKeyId: String? by project
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    
+    useInMemoryPgpKeys(
+        System.getenv("SIGNING_KEY_ID") ?: signingKeyId,
+        System.getenv("SIGNING_SECRET_KEY_RING_FILE") ?: signingKey,
+        System.getenv("SIGNING_PASSWORD") ?: signingPassword
+    )
+    
+    sign(publishing.publications["maven"])
 }
 
 // Handle duplicate resources
