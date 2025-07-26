@@ -74,7 +74,8 @@ jobs:
         fi
         
         echo "Running full Gradle build and test suite..."
-        $GRADLE_CMD clean build --info
+        # Skip signing during validation since we don't have secrets yet
+        $GRADLE_CMD clean build -x signMavenPublication --info
         
     - name: Generate all artifacts
       run: |
@@ -86,7 +87,8 @@ jobs:
         fi
         
         echo "Generating all publication artifacts..."
-        $GRADLE_CMD publishToMavenLocal --info
+        # Skip signing during artifact generation, just generate POMs and JARs
+        $GRADLE_CMD publishToMavenLocal -x signMavenPublication --info
         
         echo "Checking generated artifacts..."
         find build -name "*.jar" -type f
