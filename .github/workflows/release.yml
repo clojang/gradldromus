@@ -155,6 +155,19 @@ jobs:
 
       - name: Import GPG key
         run: |
+          echo "Setting up GPG environment..."
+          
+          # Configure GPG to use batch mode and avoid prompts
+          mkdir -p ~/.gnupg
+          echo "use-agent" >> ~/.gnupg/gpg.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "batch" >> ~/.gnupg/gpg.conf
+          echo "no-tty" >> ~/.gnupg/gpg.conf
+          
+          # Set permissions
+          chmod 700 ~/.gnupg
+          chmod 600 ~/.gnupg/gpg.conf
+          
           echo "Importing GPG key..."
           
           # Create a temporary file for the key to avoid shell escaping issues
@@ -165,6 +178,14 @@ jobs:
           
           # Clean up the temporary file
           rm /tmp/private.key
+          
+          # Configure GPG agent
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "default-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
+          echo "max-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf
+          
+          # Restart GPG agent
+          gpg-connect-agent reloadagent /bye || true
           
           # List keys to verify import
           echo "Imported GPG keys:"
@@ -177,17 +198,16 @@ jobs:
           if gpg --list-secret-keys $GPG_KEY_ID >/dev/null 2>&1; then
             echo "✓ Key $GPG_KEY_ID found in keyring"
             
-            # Test exporting the key in the format Gradle expects
-            echo "Testing key export for Gradle..."
-            gpg --export-secret-keys --armor $GPG_KEY_ID > /tmp/exported_key.asc
+            # Test signing with the key
+            echo "Testing signing capability..."
+            echo "test message" | gpg --armor --detach-sign --local-user $GPG_KEY_ID --batch --yes --passphrase "${{ secrets.GPG_PASSPHRASE }}" --pinentry-mode loopback > /dev/null 2>&1
             
-            echo "Exported key length: $(wc -c < /tmp/exported_key.asc)"
-            echo "First few lines of exported key:"
-            head -3 /tmp/exported_key.asc
-            echo "Last few lines of exported key:"
-            tail -3 /tmp/exported_key.asc
-            
-            rm /tmp/exported_key.asc
+            if [ $? -eq 0 ]; then
+              echo "✓ Signing test successful"
+            else
+              echo "✗ Signing test failed"
+              exit 1
+            fi
           else
             echo "✗ Key $GPG_KEY_ID not found in keyring"
             echo "Available keys:"
