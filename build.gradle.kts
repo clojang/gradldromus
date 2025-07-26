@@ -1,10 +1,33 @@
+import org.gradle.api.plugins.quality.CheckstyleExtension
+import org.gradle.api.plugins.quality.Checkstyle
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+
 plugins {
-    `java-gradle-plugin`
-    `maven-publish`
+    id("java")
+    id("org.sonarqube")
+    id("com.github.ben-manes.versions")
+    id("org.owasp.dependencycheck")
 }
 
 group = "io.github.clojang"
 version = "0.2.0"
+
+// Configure SonarQube to avoid deprecated behavior
+sonar {
+    properties {
+        property("sonar.gradle.skipCompile", "true")
+    }
+}
+
+// Make version catalog values available to subprojects via ext properties
+ext {
+    set("testcontainersBom", libs.testcontainers.bom.get())
+    set("junitJupiter", libs.junit.jupiter.get())
+    set("mockitoCore", libs.mockito.core.get())
+    set("assertjCore", libs.assertj.core.get())
+    set("testcontainersCore", libs.testcontainers.core.get())
+    set("checkstyleVersion", libs.versions.checkstyle.get())
+}
 
 repositories {
     mavenCentral()
@@ -206,11 +229,46 @@ publishing {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Handle duplicate resources
 tasks.withType<ProcessResources> {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// Configure OWASP Dependency Check for root project
+dependencyCheck {
+    // Configuration for OWASP Dependency Check
+    formats = listOf("HTML", "JSON", "XML")  // Use string format names
+    suppressionFiles = listOf("${rootProject.projectDir}/config/owasp-suppressions.xml")
+    analyzers.assemblyEnabled = false
+
+    // NVD API Configuration - try multiple sources
+    val apiKey = System.getenv("NVD_API_KEY")
+        ?: project.findProperty("nvdApiKey") as String?
+        ?: ""
+
+    // Debug print (remove after testing)
+    if (apiKey.isNotEmpty()) {
+        println("NVD API Key found: ${apiKey.take(4)}...")
+    } else {
+        println("WARNING: No NVD API Key found!")
+    }
+
+    nvd.apiKey = apiKey
+
+    // Clear the old datafeed URL
+    nvd.datafeedUrl = ""
+
+    // Retry configuration with increased delays
+    nvd.maxRetryCount = 5
+    nvd.delay = 10000  // 10 seconds between retries (increased from 5)
+
+    // Fail build on CVSS score 7 or higher
+    failBuildOnCVSS = 7.0f
+
+    // IMPORTANT: Scan all subprojects - use project paths as strings
+    scanProjects = allprojects.map { it.path }
 }

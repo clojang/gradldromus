@@ -1,0 +1,284 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  JAVA_VERSION: "17" # Changed to match your build.gradle.kts
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+
+      - name: Compile
+        run: ./gradlew build
+
+      - name: Run linter
+        run: ./gradlew checkstyleMain
+
+      - name: Run unit tests
+        run: ./gradlew test --rerun-tasks
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+
+  code-quality:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Make gradlew executable
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+
+      - name: Run Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        continue-on-error: true
+
+      - name: Run SpotBugs
+        run: ./gradlew spotbugsMain spotbugsTest
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        continue-on-error: true
+
+      - name: Run PMD
+        run: ./gradlew pmdMain pmdTest
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        continue-on-error: true
+
+      - name: Run SonarQube analysis
+        run: ./gradlew sonar
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload Checkstyle results
+        uses: actions/upload-artifact@v4
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        if: always()
+        with:
+          name: checkstyle-results
+          path: |
+            **/build/reports/checkstyle/
+
+      - name: Upload SpotBugs results
+        uses: actions/upload-artifact@v4
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        if: always()
+        with:
+          name: spotbugs-results
+          path: |
+            **/build/reports/spotbugs/
+
+      - name: Upload PMD results
+        uses: actions/upload-artifact@v4
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        if: always()
+        with:
+          name: pmd-results
+          path: |
+            **/build/reports/pmd/
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+
+      - name: Run OWASP Dependency Check
+        run: ./gradlew dependencyCheckAnalyze
+        continue-on-error: true
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload OWASP results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-check-report
+          path: |
+            **/build/reports/dependency-check-report.html
+
+      - name: Build Docker image with Jib (local)
+        run: |
+          ./gradlew jibDockerBuild --image=${{ github.repository }}:${{ github.sha }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: ${{ github.repository }}:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          exit-code: "0"
+
+      - name: Check if SARIF file was created
+        id: check-sarif
+        run: |
+          if [ -f trivy-results.sarif ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+            echo "Warning: Trivy SARIF file was not generated"
+          fi
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && steps.check-sarif.outputs.sarif_exists == 'true'
+        with:
+          sarif_file: "trivy-results.sarif"
+        continue-on-error: true  # Don't fail if Advanced Security is not enabled
+
+      - name: Run Trivy in table format for logs
+        uses: aquasecurity/trivy-action@0.32.0
+        if: always()
+        with:
+          image-ref: ${{ github.repository }}:${{ github.sha }}
+          format: "table"
+          exit-code: "0"
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run integration tests
+        run: ./gradlew integrationTest
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+
+  package:
+    runs-on: ubuntu-latest
+    needs: [code-quality, security-scan]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: |
+          gradle wrapper
+          chmod +x ./gradlew
+
+      - name: Build application
+        run: ./gradlew bootJar -x test
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-jar
+          path: |
+            **/build/libs/*.jar
+
+      - name: Build Docker image with Jib
+        run: ./gradlew jibDockerBuild --image=${{ github.repository }}:${{ github.sha }}
+        # run: ./gradlew jib --image=${{ github.repository }}:${{ github.sha }}
+
+      # - name: Authenticate to Google Cloud
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # - name: Configure Docker for GCR
+      #   run: gcloud auth configure-docker
+
+      # - name: Build and push Docker image to GCR with Jib
+      #   run: |
+      #     ./gradlew jib \
+      #       --image=gcr.io/${{ env.GCP_PROJECT_ID }}/${{ github.event.repository.name }}:${{ github.sha }} \
+      #       --image=gcr.io/${{ env.GCP_PROJECT_ID }}/${{ github.event.repository.name }}:latest
