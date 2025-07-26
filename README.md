@@ -18,11 +18,17 @@
 
 **Before (Default Gradle):**
 ```
-> Task :test
-Gradle Test Run :test STARTED
-com.example.MyTest > testSomething() PASSED
-com.example.MyTest > testSomethingElse() FAILED
-... lots of verbose output ...
+> Task :modules:common:configuration:test
+
+ConfigurationLoaderTest > shouldThrowExceptionForInvalidClass() PASSED
+
+ConfigurationLoaderTest > shouldLoadConfigurationClass() PASSED
+
+GcpPropertiesTest > shouldSetAndGetProjectId() PASSED
+
+GcpPropertiesTest > shouldSetAndGetRegion() PASSED
+
+... lots of unlovely output ...
 ```
 
 **After (GradlDromus):**
@@ -158,7 +164,7 @@ Failed tests show clear error information:
 ## Requirements
 
 - **Gradle**: 6.0+
-- **Java**: 11+
+- **Java**: 17+
 
 ## Contributing
 
