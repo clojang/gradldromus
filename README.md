@@ -4,7 +4,7 @@
 
 [![Project Logo][logo]][logo-large]
 
-*A beautiful, clean test output formatter for Gradle that replaces the default messy test logging with elegant, readable results.*
+*An explicit, clean, and beautiful test formatter for Gradle's test runner*
 
 ## Features
 
@@ -116,9 +116,9 @@ gradldromus {
     skipSymbol = "-"
     
     // Fun
-    passSymbol = "🎉"
-    failSymbol = "💥"
-    skipSymbol = "😴"
+    passSymbol = "🍕"
+    failSymbol = "💣"
+    skipSymbol = "😰"
 }
 ```
 
@@ -130,9 +130,9 @@ GradlDromus intercepts Gradle's test events and:
 2. **Captures** test results in real-time
 3. **Formats** them with clean, readable output
 4. **Overwrites** any messy terminal output using smart cursor control
-5. **Provides** a comprehensive summary at the end
+5. **Provides** a concise summary at the end
 
-The result is a clean, professional test output that's easy to scan and understand.
+The result is a clean test output that's easy to scan and understand. And pleasant to look at 😊
 
 ## Advanced Features
 
@@ -163,12 +163,12 @@ Failed tests show clear error information:
 
 ## Requirements
 
-- **Gradle**: 6.0+
+- **Gradle**: 8.0+
 - **Java**: 17+
 
 ## Contributing
 
-Found a bug or have a feature request? Please open an issue on GitHub!
+Found a bug or have a feature request? Please [open an issue](https://github.com/clojang/gradldromus/issues/new) on GitHub!
 
 ### Building from Source
 
@@ -194,9 +194,9 @@ Licensed under the Apache License, Version 2.0. See `LICENSE` file for details.
 
 ## Inspiration
 
-GradlDromus was created because Gradle's default test output is... challenging to read. We wanted something clean, beautiful, and informative - test output you'd actually *want* to look at.
+GradlDromus was created because Gradle's default test output is ... challenging to read. We wanted something clean, beautiful, and informative - test output you'd actually *want* to look at.
 
-The name combines "Gradle" with "dromus" (from Greek, meaning "running" or "course") - because your tests should run beautifully.
+The name combines "Gradle" with "dromus" (from Greek, meaning "running" or "course").
 
 ---
 

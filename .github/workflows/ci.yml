@@ -185,6 +185,8 @@ jobs:
           chmod +x ./gradlew
 
       - name: Build application
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: ./gradlew bootJar -x test
 
       - name: Upload JAR artifact
