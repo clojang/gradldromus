@@ -270,11 +270,9 @@ jobs:
           
           # For GitHub Packages, we need to exclude ALL signing tasks
           echo "Publishing to GitHub Packages (without signing)..."
-          $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository \
-            -x signMavenPublication \
-            -x signPluginMavenPublication \
-            -x signGradldromusPluginMarkerMavenPublication \
-            --info || {
+          if $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository -x signMavenPublication -x signPluginMavenPublication -x signGradldromusPluginMarkerMavenPublication --info; then
+            echo "✅ Successfully published to GitHub Packages"
+          else
             echo "Direct publishing failed, trying alternative approach..."
             
             # Alternative: Build artifacts and publish manually without signing
@@ -305,7 +303,7 @@ allprojects {
 EOF
             
             $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository --init-script no-signing.gradle --info
-          }
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
