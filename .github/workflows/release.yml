@@ -79,25 +79,32 @@ jobs:
         echo "Generating POM file for maven publication..."
         $GRADLE_CMD generatePomFileForMavenPublication --info
         
+        echo "Checking if POM was generated..."
+        if [ -f "build/publications/maven/pom-default.xml" ]; then
+          echo "✅ POM file generated successfully"
+          ls -la build/publications/maven/
+        else
+          echo "❌ POM file not generated. Debugging..."
+          echo "Contents of build directory:"
+          find build -type f -name "*.xml" 2>/dev/null || echo "No XML files found"
+          echo "Contents of build/publications directory (if exists):"
+          find build/publications -type f 2>/dev/null || echo "publications directory not found"
+          exit 1
+        fi
+        
     - name: Prepare Maven structure
       run: |
         mkdir -p target
         
-        # Find the generated POM file (location may vary)
-        POM_FILE=""
-        if [ -f "build/publications/maven/pom-default.xml" ]; then
-          POM_FILE="build/publications/maven/pom-default.xml"
-        elif [ -f "build/publications/maven/pom.xml" ]; then
-          POM_FILE="build/publications/maven/pom.xml"
-        else
-          # Look for any generated POM file
-          POM_FILE=$(find build -name "pom*.xml" | head -1)
-        fi
+        # The POM file should be at build/publications/maven/pom-default.xml
+        POM_FILE="build/publications/maven/pom-default.xml"
         
-        if [ -z "$POM_FILE" ]; then
-          echo "No generated POM file found!"
-          echo "Contents of build directory:"
-          find build -type f -name "*.xml" || echo "No XML files found in build directory"
+        if [ ! -f "$POM_FILE" ]; then
+          echo "Expected POM file not found at: $POM_FILE"
+          echo "Searching for any generated POM files..."
+          find build -name "*.xml" -type f 2>/dev/null || echo "No XML files found in build directory"
+          echo "Contents of build/publications/maven/ directory:"
+          ls -la build/publications/maven/ 2>/dev/null || echo "Directory does not exist"
           exit 1
         fi
         
