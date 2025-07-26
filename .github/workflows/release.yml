@@ -76,43 +76,64 @@ jobs:
           GRADLE_CMD="gradle"
         fi
         
-        echo "Generating POM file for maven publication..."
-        $GRADLE_CMD generatePomFileForMavenPublication --info
+        echo "First, let's see what publishing tasks are available:"
+        $GRADLE_CMD tasks --group=publishing --info
         
-        echo "Checking if POM was generated..."
-        if [ -f "build/publications/maven/pom-default.xml" ]; then
-          echo "✅ POM file generated successfully"
-          ls -la build/publications/maven/
+        echo "Trying to generate POM file..."
+        # For Gradle plugin projects, sometimes the tasks have different names
+        if $GRADLE_CMD generatePomFileForMavenPublication --info; then
+          echo "✅ POM generated with generatePomFileForMavenPublication"
+        elif $GRADLE_CMD generatePomFileForPluginMavenPublication --info; then
+          echo "✅ POM generated with generatePomFileForPluginMavenPublication"
         else
-          echo "❌ POM file not generated. Debugging..."
-          echo "Contents of build directory:"
-          find build -type f -name "*.xml" 2>/dev/null || echo "No XML files found"
-          echo "Contents of build/publications directory (if exists):"
-          find build/publications -type f 2>/dev/null || echo "publications directory not found"
-          exit 1
+          echo "Trying to use publishToMavenLocal to generate POM..."
+          $GRADLE_CMD publishToMavenLocal --info
         fi
+        
+        echo "Checking what was generated..."
+        find build -name "*.xml" -type f | head -10
         
     - name: Prepare Maven structure
       run: |
         mkdir -p target
         
-        # The POM file should be at build/publications/maven/pom-default.xml
-        POM_FILE="build/publications/maven/pom-default.xml"
+        # Look for any generated POM files in various locations
+        echo "Looking for generated POM files..."
+        POM_LOCATIONS=(
+          "build/publications/maven/pom-default.xml"
+          "build/publications/pluginMaven/pom-default.xml"
+          "build/publications/gradldromusPluginMarkerMaven/pom-default.xml"
+        )
         
-        if [ ! -f "$POM_FILE" ]; then
-          echo "Expected POM file not found at: $POM_FILE"
-          echo "Searching for any generated POM files..."
-          find build -name "*.xml" -type f 2>/dev/null || echo "No XML files found in build directory"
-          echo "Contents of build/publications/maven/ directory:"
-          ls -la build/publications/maven/ 2>/dev/null || echo "Directory does not exist"
+        POM_FILE=""
+        for location in "${POM_LOCATIONS[@]}"; do
+          if [ -f "$location" ]; then
+            POM_FILE="$location"
+            echo "✅ Found POM at: $location"
+            break
+          fi
+        done
+        
+        # If not found in expected locations, search broadly
+        if [ -z "$POM_FILE" ]; then
+          echo "Looking for any POM files in build directory..."
+          POM_FILE=$(find build -name "pom*.xml" -type f | head -1)
+        fi
+        
+        if [ -z "$POM_FILE" ]; then
+          echo "❌ No POM file found anywhere!"
+          echo "All XML files in build directory:"
+          find build -name "*.xml" -type f || echo "No XML files found"
+          echo "Directory structure:"
+          find build -type d | head -20
           exit 1
         fi
         
-        echo "Found POM file: $POM_FILE"
+        echo "Using POM file: $POM_FILE"
         # Copy the generated POM to root for Maven compatibility
         cp "$POM_FILE" pom.xml
         
-        echo "Generated pom.xml content:"
+        echo "Generated pom.xml content (first 20 lines):"
         head -20 pom.xml
         
     - name: Upload POM and Gradle artifacts
