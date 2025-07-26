@@ -33,12 +33,18 @@ jobs:
           
     - name: Validate project
       run: ./gradlew build -x test
+      env:
+        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
       
     - name: Run full test suite
       run: ./gradlew test
+      env:
+        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
       
     - name: Verify package can be built
       run: ./gradlew assemble
+      env:
+        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
   release:
     name: Create Release
@@ -160,13 +166,14 @@ jobs:
 
       - name: Publish to Maven Central
         run: |
-          ./gradlew publishToSonatype closeSonatypeStagingRepository
+          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
         env:
           SONATYPE_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
           SIGNING_KEY_ID: ${{ secrets.GPG_KEY_ID }}
           SIGNING_PASSWORD: ${{ secrets.GPG_PASSPHRASE }}
           SIGNING_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
 
   publish-github-packages:
     name: Publish to GitHub Packages
