@@ -143,23 +143,17 @@ GradlDromus automatically detects your terminal width for proper formatting:
 
 Works seamlessly with multi-module Gradle projects, showing clear separation between modules:
 
-```
-:module-a:test
-    TestA.method1() ................................................💚 (23ms)
-    TestA.method2() ................................................💚 (15ms)
-
-:module-b:test  
-    TestB.method1() ................................................💚 (45ms)
-```
+[![A view of passing tests][screenshot-success]][screenshot-success]
 
 ### Failure Details
 
 Failed tests show clear error information:
 
-```
-    DatabaseTest.shouldConnect() ..................................💔 (156ms)
-    → Connection refused: localhost:5432
-```
+[![A view of failing tests][screenshot-exceptions]][screenshot-exceptions]
+
+### Summary Statistics
+
+[![A view of tests summary][screenshot-summary]][screenshot-summary]
 
 ## Requirements
 
@@ -206,6 +200,8 @@ The name combines "Gradle" with "dromus" (from Greek, meaning "running" or "cour
 
 [logo]: resources/images/logo.jpg
 [logo-large]: resources/images/logo-large.jpg
-[screenshot]: resources/images/demo-screenshot.png
+[screenshot-success]: resources/images/screenshot-success.png
+[screenshot-exceptions]: resources/images/screenshot-exceptions.png
+[screenshot-summary]: resources/images/screenshot-summary.png
 [gh-actions-badge]: https://github.com/clojang/gradldromus/workflows/CI/badge.svg
 [gh-actions]: https://github.com/clojang/gradldromus/actions?query=workflow%3ACI

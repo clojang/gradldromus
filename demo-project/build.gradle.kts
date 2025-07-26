@@ -75,6 +75,21 @@ tasks.register<Test>("demoCustomSymbols") {
     systemProperty("gradldromus.maxStackTraceDepth", "3")
 }
 
+tasks.register<Test>("demoPassing") {
+    description = "Demo with all passing tests"
+    group = "demo"
+    
+    // Only run the passing tests
+    include("**/passing/**")
+    
+    systemProperty("gradldromus.showExceptions", "true")
+    systemProperty("gradldromus.showStackTraces", "true")
+    systemProperty("gradldromus.showFullStackTraces", "false")
+    systemProperty("gradldromus.maxStackTraceDepth", "5")
+    systemProperty("gradldromus.showTimings", "true")
+    systemProperty("gradldromus.useColors", "true")
+}
+
 // Convenience task to run all demo variations
 tasks.register("demoAll") {
     description = "Run all demo variations"
@@ -85,6 +100,7 @@ tasks.register("demoAll") {
         "demoStackTraces", 
         "demoFullStackTraces",
         "demoNoExceptions",
-        "demoCustomSymbols"
+        "demoCustomSymbols",
+        "demoPassing"
     )
 }
