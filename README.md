@@ -69,7 +69,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath("io.github.clojang:gradldromus:0.3.22")
+        classpath("io.github.clojang:gradldromus:0.3.23")
     }
 }
 
