@@ -26,6 +26,10 @@ import static io.github.clojang.gradldromus.AnsiColors.BLUE;
 import static io.github.clojang.gradldromus.AnsiColors.GREEN;
 import static io.github.clojang.gradldromus.AnsiColors.CYAN;
 
+/**
+ * Custom test listener that provides clean, colorized output for test results.
+ * Tracks test statistics and formats output according to the plugin configuration.
+ */
 public class CustomTestListener implements TestListener {
     private static final double MILLISECONDS = 1000.0;
     private static final int DOTS_PAD = 76;
@@ -45,6 +49,11 @@ public class CustomTestListener implements TestListener {
     private final AtomicInteger totalFailed = new AtomicInteger(0);
     private final AtomicInteger totalSkipped = new AtomicInteger(0);
     
+    /**
+     * Creates a new CustomTestListener with the specified extension configuration.
+     * 
+     * @param extension the plugin extension containing configuration settings
+     */
     public CustomTestListener(GradlDromusExtension extension) {
         this.extension = extension;
         this.colors = new AnsiColors(extension.isUseColors());
@@ -53,10 +62,20 @@ public class CustomTestListener implements TestListener {
         this.output = System.out;
     }
     
+    /**
+     * Checks if any tests have been executed.
+     * 
+     * @return true if tests have been executed, false otherwise
+     */
     public boolean hasTests() {
         return totalTests.get() > 0;
     }
     
+    /**
+     * Sets the current task path for test output organization.
+     * 
+     * @param taskPath the path of the current task being executed
+     */
     public void setCurrentTaskPath(String taskPath) {
         currentTaskPath.set(taskPath);
     }
@@ -260,6 +279,9 @@ public class CustomTestListener implements TestListener {
         }
     }
 
+    /**
+     * Prints the final test summary with statistics and overall results.
+     */
     public void printFinalSummary() {
         long totalTime = System.currentTimeMillis() - globalStartTime.get();
         

@@ -22,9 +22,20 @@ import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_GREEN;
 import static io.github.clojang.gradldromus.AnsiColors.GREEN;
 import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_BLACK;
 
+/**
+ * Main plugin class for GradlDromus, providing clean and customizable test output formatting.
+ * This plugin replaces Gradle's default test output with a more readable and colorful alternative.
+ */
 public class GradlDromusPlugin implements Plugin<Project> {
     // Use a map to track listeners per root project
     private static final Map<Project, CustomTestListener> LISTENER_MAP = new ConcurrentHashMap<>();
+
+    /**
+     * Default constructor for the plugin.
+     */
+    public GradlDromusPlugin() {
+        // Default constructor
+    }
 
     @Override
     public void apply(Project project) {
@@ -207,12 +218,21 @@ public class GradlDromusPlugin implements Plugin<Project> {
         logging.setMaxGranularity(0);
     }
     
-    // Wrapper listener that sets the correct task path
+    /**
+     * Wrapper listener that sets the correct task path for test output organization.
+     * This ensures that each test task's output is properly categorized and formatted.
+     */
     private static class TaskSpecificListener implements TestListener {
         private final CustomTestListener delegate;
         private final Test testTask;
         private boolean initialized = false;
         
+        /**
+         * Creates a new task-specific listener wrapper.
+         * 
+         * @param delegate the underlying test listener to delegate to
+         * @param testTask the test task this listener is associated with
+         */
         TaskSpecificListener(CustomTestListener delegate, Test testTask) {
             this.delegate = delegate;
             this.testTask = testTask;
