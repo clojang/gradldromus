@@ -87,8 +87,16 @@ jobs:
         fi
         
         echo "Generating all publication artifacts..."
-        # Generate artifacts without signing - provide empty signing credentials to disable signing
-        SIGNING_KEY_ID="" SIGNING_KEY="" SIGNING_PASSWORD="" $GRADLE_CMD publishToMavenLocal --info
+        # First try: Exclude all signing tasks explicitly
+        if $GRADLE_CMD publishToMavenLocal -x signMavenPublication -x signPluginMavenPublication -x signGradldromusPluginMarkerMavenPublication --info; then
+          echo "✅ Successfully generated artifacts without signing"
+        else
+          echo "⚠️  Failed with signing exclusion, trying alternative approach..."
+          # Alternative: Just build the JARs and generate POMs separately
+          $GRADLE_CMD clean build --info
+          $GRADLE_CMD generatePomFileForMavenPublication --info || echo "POM generation may have failed"
+          $GRADLE_CMD generatePomFileForPluginMavenPublication --info || echo "Plugin POM generation may have failed"
+        fi
         
         echo "Checking generated artifacts..."
         find build -name "*.jar" -type f
