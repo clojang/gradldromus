@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.25"
+version = "0.3.26"
 
 // Make version catalog values available via ext properties
 ext {
@@ -156,8 +156,8 @@ publishing {
 afterEvaluate {
     publishing {
         publications {
-            // Configure the pluginMaven publication created by java-gradle-plugin
-            named<MavenPublication>("pluginMaven") {
+            // Configure both the pluginMaven publication and the plugin marker publication
+            withType<MavenPublication> {
                 pom {
                     name.set("GradlDromus")
                     description.set("A Gradle plugin for GradlDromus functionality")
