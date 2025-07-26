@@ -6,7 +6,7 @@ java = "17"
 junit4 = "4.13.2"
 
 # Plugin versions - only used plugins
-sonarqube = "4.4.1.3373"
+sonarqube = "6.2.0.5505"
 versions-plugin = "0.52.0"
 dependency-check = "12.1.3"
 

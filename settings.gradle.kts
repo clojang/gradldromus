@@ -11,7 +11,7 @@ pluginManagement {
         // in settings.gradle.kts executes before the version catalog is available,
         // so we need to have plugin versions defined here in addition to the versions
         // // .toml file.
-        id("org.sonarqube") version "4.4.1.3373"
+        id("org.sonarqube") version "6.2.0.5505"
         id("com.github.ben-manes.versions") version "0.52.0"
         id("com.google.cloud.tools.jib") version "3.4.0"
         id("io.spring.dependency-management") version "1.1.7"
