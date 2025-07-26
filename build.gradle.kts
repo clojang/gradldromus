@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.22"
+version = "0.3.23"
 
 // Make version catalog values available via ext properties
 ext {
@@ -132,9 +132,9 @@ nexusPublishing {
             nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
             snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
             
-            // Use the standard property names that the plugin expects
-            username.set(project.findProperty("sonatypeUsername") as String? ?: System.getenv("SONATYPE_USERNAME"))
-            password.set(project.findProperty("sonatypePassword") as String? ?: System.getenv("SONATYPE_PASSWORD"))
+            // Use unified environment variable names matching GitHub secrets
+            username.set(project.findProperty("sonatypeUsername") as String? ?: System.getenv("MAVEN_CENTRAL_USERNAME"))
+            password.set(project.findProperty("sonatypePassword") as String? ?: System.getenv("MAVEN_CENTRAL_TOKEN"))
         }
     }
 }
@@ -191,9 +191,9 @@ afterEvaluate {
 
 // Configure signing
 signing {
-    val signingKeyId = System.getenv("SIGNING_KEY_ID") ?: project.findProperty("signing.keyId") as String?
-    val signingKey = System.getenv("SIGNING_KEY") ?: project.findProperty("signing.secretKeyRingFile") as String?
-    val signingPassword = System.getenv("SIGNING_PASSWORD") ?: project.findProperty("signing.password") as String?
+    val signingKeyId = System.getenv("GPG_KEY_ID")
+    val signingKey = System.getenv("GPG_PRIVATE_KEY")
+    val signingPassword = System.getenv("GPG_PASSPHRASE")
     
     // Only configure signing if all required properties are present
     if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
@@ -207,17 +207,22 @@ signing {
         }
     } else {
         println("Signing configuration not found - skipping artifact signing")
+        println("GPG_KEY_ID present: ${!signingKeyId.isNullOrEmpty()}")
+        println("GPG_PRIVATE_KEY present: ${!signingKey.isNullOrEmpty()}")  
+        println("GPG_PASSPHRASE present: ${!signingPassword.isNullOrEmpty()}")
     }
 }
 
 // Only require signing for non-snapshot versions and when publishing to Maven Central
 tasks.withType<Sign>().configureEach {
     onlyIf {
-        val signingKeyId = System.getenv("SIGNING_KEY_ID") ?: project.findProperty("signing.keyId") as String?
-        val signingKey = System.getenv("SIGNING_KEY") ?: project.findProperty("signing.secretKeyRingFile") as String?
-        val signingPassword = System.getenv("SIGNING_PASSWORD") ?: project.findProperty("signing.password") as String?
+        val signingKeyId = System.getenv("GPG_KEY_ID")
+        val signingKey = System.getenv("GPG_PRIVATE_KEY")
+        val signingPassword = System.getenv("GPG_PASSPHRASE")
         
-        !signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()
+        val hasSigningConfig = !signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()
+        println("Signing task ${this.name} - hasSigningConfig: $hasSigningConfig")
+        hasSigningConfig
     }
 }
 
