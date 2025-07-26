@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.23"
+version = "0.3.24"
 
 // Make version catalog values available via ext properties
 ext {
@@ -197,7 +197,18 @@ signing {
     
     // Only configure signing if all required properties are present
     if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
-        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+        println("Configuring in-memory PGP signing with key ID: $signingKeyId")
+        
+        try {
+            useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+            println("✓ In-memory PGP keys configured successfully")
+        } catch (e: Exception) {
+            println("✗ Failed to configure in-memory PGP keys: ${e.message}")
+            // Try alternative approach - set as properties and let Gradle handle it
+            project.ext["signing.keyId"] = signingKeyId
+            project.ext["signing.password"] = signingPassword
+            project.ext["signing.secretKeyRingFile"] = null // Force in-memory mode
+        }
         
         // Sign all publications after they're created
         afterEvaluate {

@@ -156,7 +156,15 @@ jobs:
       - name: Import GPG key
         run: |
           echo "Importing GPG key..."
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import --quiet
+          
+          # Create a temporary file for the key to avoid shell escaping issues
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" > /tmp/private.key
+          
+          # Import the key
+          gpg --batch --import /tmp/private.key
+          
+          # Clean up the temporary file
+          rm /tmp/private.key
           
           # List keys to verify import
           echo "Imported GPG keys:"
@@ -168,18 +176,23 @@ jobs:
           
           if gpg --list-secret-keys $GPG_KEY_ID >/dev/null 2>&1; then
             echo "✓ Key $GPG_KEY_ID found in keyring"
+            
+            # Test exporting the key in the format Gradle expects
+            echo "Testing key export for Gradle..."
+            gpg --export-secret-keys --armor $GPG_KEY_ID > /tmp/exported_key.asc
+            
+            echo "Exported key length: $(wc -c < /tmp/exported_key.asc)"
+            echo "First few lines of exported key:"
+            head -3 /tmp/exported_key.asc
+            echo "Last few lines of exported key:"
+            tail -3 /tmp/exported_key.asc
+            
+            rm /tmp/exported_key.asc
           else
             echo "✗ Key $GPG_KEY_ID not found in keyring"
             echo "Available keys:"
             gpg --list-secret-keys --keyid-format SHORT
-          fi
-          
-          # Test that we can export the key (this is what Gradle will try to do)
-          echo "Testing key export..."
-          if gpg --export-secret-keys --armor $GPG_KEY_ID >/dev/null 2>&1; then
-            echo "✓ Key export test successful"
-          else
-            echo "✗ Key export test failed"
+            exit 1
           fi
 
       - name: Publish to Maven Central
