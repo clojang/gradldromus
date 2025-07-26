@@ -39,6 +39,7 @@ bin/
 .vscode/
 
 ### Local Stuff ###
+/resources/images/drafts
 /scripts
 /tmp
 

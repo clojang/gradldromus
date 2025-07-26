@@ -141,7 +141,7 @@ public class ExceptionDemoTests {
     
     @Test
     public void testLongClassName() {
-        throw new io.github.clojang.gradldromus.demo.VeryLongClassNameExceptionForTestingPurposesOnly(
+        throw new VeryLongClassNameExceptionForTestingPurposesOnly(
             "Exception from a class with a very long name"
         );
     }

@@ -31,6 +31,10 @@ public class GradlDromusPlugin implements Plugin<Project> {
         // Create extension for configuration
         GradlDromusExtension extension = project.getExtensions()
             .create("gradldromus", GradlDromusExtension.class);
+        
+        // Override extension settings with system properties if they exist
+        configureFromSystemProperties(extension);
+        
         AnsiColors colors = new AnsiColors(extension.isUseColors());
         CleanTerminalPrinter printer = new CleanTerminalPrinter(extension);
         Project rootProject = project.getRootProject();
@@ -61,7 +65,6 @@ public class GradlDromusPlugin implements Plugin<Project> {
                             String pluginName = props.getProperty("plugin.name", "GradlDromus");
                             String pluginVersion = props.getProperty("plugin.version", "unknown");
                             printer.println(output, colors.colorize("Running tests with " + pluginName + " (version: " + pluginVersion + ")", GREEN));
-                            //System.err.println("Running tests with " + pluginName + " (version: " + pluginVersion + ") [loaded from: " + path + "]");
                             loaded = true;
                             break;
                         }
@@ -75,7 +78,6 @@ public class GradlDromusPlugin implements Plugin<Project> {
                     Package pkg = getClass().getPackage();
                     String version = pkg != null ? pkg.getImplementationVersion() : "unknown";
                     printer.println(output, colors.colorize("Running tests with GradlDromus (version: " + version + ")", GREEN));
-                    //System.err.println("Running tests with GradlDromus (version: " + version + ") [properties file not found]");
                 }
                 
                 printer.println(output, colors.colorize("-".repeat(78), BRIGHT_GREEN));
@@ -111,7 +113,7 @@ public class GradlDromusPlugin implements Plugin<Project> {
                 task.getExtensions().getExtraProperties().set("originalLogLevel", originalLevel);
                 
                 // Set to quiet during test execution
-                if (extension.suppressGradleOutput) {
+                if (extension.isSuppressGradleOutput()) {
                     project.getGradle().getStartParameter().setLogLevel(LogLevel.QUIET);
                 }
             });
@@ -123,6 +125,63 @@ public class GradlDromusPlugin implements Plugin<Project> {
                 project.getGradle().getStartParameter().setLogLevel(originalLevel);
             });
         });
+    }
+    
+    private void configureFromSystemProperties(GradlDromusExtension extension) {
+        // Check for system properties and override extension settings
+        String showExceptions = System.getProperty("gradldromus.showExceptions");
+        if (showExceptions != null) {
+            extension.setShowExceptions(Boolean.parseBoolean(showExceptions));
+        }
+        
+        String showStackTraces = System.getProperty("gradldromus.showStackTraces");
+        if (showStackTraces != null) {
+            extension.setShowStackTraces(Boolean.parseBoolean(showStackTraces));
+        }
+        
+        String showFullStackTraces = System.getProperty("gradldromus.showFullStackTraces");
+        if (showFullStackTraces != null) {
+            extension.setShowFullStackTraces(Boolean.parseBoolean(showFullStackTraces));
+        }
+        
+        String maxStackTraceDepth = System.getProperty("gradldromus.maxStackTraceDepth");
+        if (maxStackTraceDepth != null) {
+            try {
+                extension.setMaxStackTraceDepth(Integer.parseInt(maxStackTraceDepth));
+            } catch (NumberFormatException ignored) {}
+        }
+        
+        String showTimings = System.getProperty("gradldromus.showTimings");
+        if (showTimings != null) {
+            extension.setShowTimings(Boolean.parseBoolean(showTimings));
+        }
+        
+        String passSymbol = System.getProperty("gradldromus.passSymbol");
+        if (passSymbol != null) {
+            extension.setPassSymbol(passSymbol);
+        }
+        
+        String failSymbol = System.getProperty("gradldromus.failSymbol");
+        if (failSymbol != null) {
+            extension.setFailSymbol(failSymbol);
+        }
+        
+        String skipSymbol = System.getProperty("gradldromus.skipSymbol");
+        if (skipSymbol != null) {
+            extension.setSkipSymbol(skipSymbol);
+        }
+        
+        String useColors = System.getProperty("gradldromus.useColors");
+        if (useColors != null) {
+            extension.setUseColors(Boolean.parseBoolean(useColors));
+        }
+        
+        String terminalWidth = System.getProperty("gradldromus.terminalWidth");
+        if (terminalWidth != null) {
+            try {
+                extension.setTerminalWidth(Integer.parseInt(terminalWidth));
+            } catch (NumberFormatException ignored) {}
+        }
     }
     
     private void configureTestLogging(Test testTask) {

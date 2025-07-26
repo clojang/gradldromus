@@ -35,8 +35,8 @@ sourceSets {
     }
     main {
         resources {
-            srcDir("${buildDir}/generated/resources/main")
-        }
+            srcDir(layout.buildDirectory.dir("generated/resources/main"))
+        }  
     }
 }
 
@@ -58,14 +58,10 @@ tasks.register<Test>("demoTestMinimal") {
     testClassesDirs = sourceSets.getByName("demo").output.classesDirs
     classpath = sourceSets.getByName("demo").runtimeClasspath
     
-    // Configure plugin for minimal output
-    doFirst {
-        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
-        extension.showExceptions = true
-        extension.showStackTraces = false
-        extension.showFullStackTraces = false
-        extension.showTimings = true
-    }
+    systemProperty("gradldromus.showExceptions", "true")
+    systemProperty("gradldromus.showStackTraces", "false") 
+    systemProperty("gradldromus.showFullStackTraces", "false")
+    systemProperty("gradldromus.showTimings", "true")
 }
 
 tasks.register<Test>("demoTestStackTraces") {
@@ -75,14 +71,11 @@ tasks.register<Test>("demoTestStackTraces") {
     testClassesDirs = sourceSets.getByName("demo").output.classesDirs
     classpath = sourceSets.getByName("demo").runtimeClasspath
     
-    doFirst {
-        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
-        extension.showExceptions = true
-        extension.showStackTraces = true
-        extension.showFullStackTraces = false
-        extension.maxStackTraceDepth = 5
-        extension.showTimings = true
-    }
+    systemProperty("gradldromus.showExceptions", "true")
+    systemProperty("gradldromus.showStackTraces", "true")
+    systemProperty("gradldromus.showFullStackTraces", "false")
+    systemProperty("gradldromus.maxStackTraceDepth", "5")
+    systemProperty("gradldromus.showTimings", "true")
 }
 
 tasks.register<Test>("demoTestFullStackTraces") {
@@ -92,13 +85,10 @@ tasks.register<Test>("demoTestFullStackTraces") {
     testClassesDirs = sourceSets.getByName("demo").output.classesDirs
     classpath = sourceSets.getByName("demo").runtimeClasspath
     
-    doFirst {
-        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
-        extension.showExceptions = true
-        extension.showStackTraces = false
-        extension.showFullStackTraces = true
-        extension.showTimings = true
-    }
+    systemProperty("gradldromus.showExceptions", "true")
+    systemProperty("gradldromus.showStackTraces", "false")
+    systemProperty("gradldromus.showFullStackTraces", "true")
+    systemProperty("gradldromus.showTimings", "true")
 }
 
 tasks.register<Test>("demoTestNoExceptions") {
@@ -108,13 +98,10 @@ tasks.register<Test>("demoTestNoExceptions") {
     testClassesDirs = sourceSets.getByName("demo").output.classesDirs
     classpath = sourceSets.getByName("demo").runtimeClasspath
     
-    doFirst {
-        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
-        extension.showExceptions = false
-        extension.showStackTraces = false
-        extension.showFullStackTraces = false
-        extension.showTimings = false
-    }
+    systemProperty("gradldromus.showExceptions", "false")
+    systemProperty("gradldromus.showStackTraces", "false")
+    systemProperty("gradldromus.showFullStackTraces", "false")
+    systemProperty("gradldromus.showTimings", "false")
 }
 
 tasks.register<Test>("demoTestCustomSymbols") {
@@ -124,15 +111,12 @@ tasks.register<Test>("demoTestCustomSymbols") {
     testClassesDirs = sourceSets.getByName("demo").output.classesDirs
     classpath = sourceSets.getByName("demo").runtimeClasspath
     
-    doFirst {
-        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
-        extension.passSymbol = "✅"
-        extension.failSymbol = "❌"  
-        extension.skipSymbol = "⏭"
-        extension.showExceptions = true
-        extension.showStackTraces = true
-        extension.maxStackTraceDepth = 3
-    }
+    systemProperty("gradldromus.passSymbol", "✅")
+    systemProperty("gradldromus.failSymbol", "❌")
+    systemProperty("gradldromus.skipSymbol", "⏭")
+    systemProperty("gradldromus.showExceptions", "true")
+    systemProperty("gradldromus.showStackTraces", "true")
+    systemProperty("gradldromus.maxStackTraceDepth", "3")
 }
 
 // Convenience task to run all demo variations
@@ -186,20 +170,22 @@ tasks.processResources {
 }
 
 // Alternative approach: create the properties file directly
-tasks.create("generatePluginProperties") {
-    val outputDir = file("${buildDir}/generated/resources/main/io/github/clojang/gradldromus")
-    val outputFile = file("${outputDir}/plugin.properties")
+tasks.register("generatePluginProperties") {
+    val outputDir = layout.buildDirectory.dir("generated/resources/main/io/github/clojang/gradldromus")
+    val outputFile = outputDir.map { it.file("plugin.properties") }
     
     inputs.property("version", project.version)
     outputs.file(outputFile)
     
     doLast {
-        outputDir.mkdirs()
-        outputFile.writeText("""
+        val dir = outputDir.get().asFile
+        dir.mkdirs()
+        val file = outputFile.get().asFile
+        file.writeText("""
             plugin.name=GradlDromus
             plugin.version=${project.version}
         """.trimIndent())
-        println("Generated plugin.properties at: ${outputFile}")
+        println("Generated plugin.properties at: ${file}")
     }
 }
 
