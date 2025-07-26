@@ -268,9 +268,44 @@ jobs:
             GRADLE_CMD="gradle"
           fi
           
-          # For GitHub Packages, we don't need signing, so we can exclude signing tasks
+          # For GitHub Packages, we need to exclude ALL signing tasks
           echo "Publishing to GitHub Packages (without signing)..."
-          $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository -x signMavenPublication --info
+          $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository \
+            -x signMavenPublication \
+            -x signPluginMavenPublication \
+            -x signGradldromusPluginMarkerMavenPublication \
+            --info || {
+            echo "Direct publishing failed, trying alternative approach..."
+            
+            # Alternative: Build artifacts and publish manually without signing
+            $GRADLE_CMD clean build -x signMavenPublication --info
+            
+            # Create a temporary init script to completely disable signing for this publication
+            cat > no-signing.gradle << 'EOF'
+allprojects {
+  publishing {
+    publications.withType(MavenPublication) { pub ->
+      // Remove all signature artifacts from publications
+      pub.artifacts.removeAll { artifact ->
+        artifact.file.name.endsWith('.asc')
+      }
+    }
+  }
+  
+  // Disable all signing tasks
+  tasks.withType(Sign) {
+    enabled = false
+  }
+  
+  // Override signing extension to do nothing
+  project.extensions.findByType(SigningExtension)?.with {
+    required = false
+  }
+}
+EOF
+            
+            $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository --init-script no-signing.gradle --info
+          }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
