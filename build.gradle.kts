@@ -24,6 +24,138 @@ gradlePlugin {
     }
 }
 
+// Configure source sets for demo tests
+sourceSets {
+    create("demo") {
+        java {
+            srcDir("src/demo/java")
+        }
+        compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+        runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    }
+    main {
+        resources {
+            srcDir("${buildDir}/generated/resources/main")
+        }
+    }
+}
+
+// Make demo source set extend test configurations
+configurations {
+    getByName("demoImplementation") {
+        extendsFrom(configurations.getByName("testImplementation"))
+    }
+    getByName("demoRuntimeOnly") {
+        extendsFrom(configurations.getByName("testRuntimeOnly"))
+    }
+}
+
+// Create demo test tasks with different configurations
+tasks.register<Test>("demoTestMinimal") {
+    description = "Run demo tests with minimal output (exceptions only)"
+    group = "demo"
+    
+    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
+    classpath = sourceSets.getByName("demo").runtimeClasspath
+    
+    // Configure plugin for minimal output
+    doFirst {
+        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
+        extension.showExceptions = true
+        extension.showStackTraces = false
+        extension.showFullStackTraces = false
+        extension.showTimings = true
+    }
+}
+
+tasks.register<Test>("demoTestStackTraces") {
+    description = "Run demo tests with limited stack traces"
+    group = "demo"
+    
+    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
+    classpath = sourceSets.getByName("demo").runtimeClasspath
+    
+    doFirst {
+        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
+        extension.showExceptions = true
+        extension.showStackTraces = true
+        extension.showFullStackTraces = false
+        extension.maxStackTraceDepth = 5
+        extension.showTimings = true
+    }
+}
+
+tasks.register<Test>("demoTestFullStackTraces") {
+    description = "Run demo tests with full stack traces"
+    group = "demo"
+    
+    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
+    classpath = sourceSets.getByName("demo").runtimeClasspath
+    
+    doFirst {
+        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
+        extension.showExceptions = true
+        extension.showStackTraces = false
+        extension.showFullStackTraces = true
+        extension.showTimings = true
+    }
+}
+
+tasks.register<Test>("demoTestNoExceptions") {
+    description = "Run demo tests with no exception details (pass/fail only)"
+    group = "demo"
+    
+    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
+    classpath = sourceSets.getByName("demo").runtimeClasspath
+    
+    doFirst {
+        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
+        extension.showExceptions = false
+        extension.showStackTraces = false
+        extension.showFullStackTraces = false
+        extension.showTimings = false
+    }
+}
+
+tasks.register<Test>("demoTestCustomSymbols") {
+    description = "Run demo tests with custom symbols and colors"
+    group = "demo"
+    
+    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
+    classpath = sourceSets.getByName("demo").runtimeClasspath
+    
+    doFirst {
+        val extension = project.extensions.getByType(GradlDromusExtension::class.java)
+        extension.passSymbol = "✅"
+        extension.failSymbol = "❌"  
+        extension.skipSymbol = "⏭"
+        extension.showExceptions = true
+        extension.showStackTraces = true
+        extension.maxStackTraceDepth = 3
+    }
+}
+
+// Convenience task to run all demo variations
+tasks.register("demoAll") {
+    description = "Run all demo test variations"
+    group = "demo"
+    
+    dependsOn(
+        "demoTestMinimal",
+        "demoTestStackTraces", 
+        "demoTestFullStackTraces",
+        "demoTestNoExceptions",
+        "demoTestCustomSymbols"
+    )
+}
+
+// Make demo tests depend on compiling the demo sources
+tasks.named("demoTestMinimal") { dependsOn("compileDemoJava") }
+tasks.named("demoTestStackTraces") { dependsOn("compileDemoJava") }
+tasks.named("demoTestFullStackTraces") { dependsOn("compileDemoJava") }
+tasks.named("demoTestNoExceptions") { dependsOn("compileDemoJava") }
+tasks.named("demoTestCustomSymbols") { dependsOn("compileDemoJava") }
+
 // More explicit resource processing
 tasks.processResources {
     // First, ensure all resources are copied
@@ -68,15 +200,6 @@ tasks.create("generatePluginProperties") {
             plugin.version=${project.version}
         """.trimIndent())
         println("Generated plugin.properties at: ${outputFile}")
-    }
-}
-
-// Make sure the generated properties are included
-sourceSets {
-    main {
-        resources {
-            srcDir("${buildDir}/generated/resources/main")
-        }
     }
 }
 
