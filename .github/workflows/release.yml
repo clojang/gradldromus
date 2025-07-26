@@ -27,9 +27,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v3
-      with:
-        gradle-version: wrapper
+      uses: gradle/actions/setup-gradle@v4
           
     - name: Validate project
       run: ./gradlew build -x test
@@ -66,9 +64,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Setup Gradle
-      uses: gradle/gradle-build-action@v3
-      with:
-        gradle-version: wrapper
+      uses: gradle/actions/setup-gradle@v4
           
     - name: Extract version
       id: version
