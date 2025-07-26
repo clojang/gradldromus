@@ -1,31 +1,29 @@
 package io.github.clojang.gradldromus;
 
-import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
 public class CustomTestListenerTest {
-    
-    private Project project;
+    public static final int SHORT_STACK = 3;
     private GradlDromusExtension extension;
     private CustomTestListener listener;
     private final PrintStream originalOut = System.out;
-    private ByteArrayOutputStream testOut;
     
     @Before
     public void setUp() {
-        project = ProjectBuilder.builder().build();
         extension = new GradlDromusExtension();
-        listener = new CustomTestListener(project, extension);
+        listener = new CustomTestListener(extension);
         
         // Capture output
-        testOut = new ByteArrayOutputStream();
+        ByteArrayOutputStream testOut = new ByteArrayOutputStream();
         System.setOut(new PrintStream(testOut));
     }
     
@@ -53,9 +51,9 @@ public class CustomTestListenerTest {
         extension.setShowExceptions(false);
         extension.setShowStackTraces(true);
         extension.setShowFullStackTraces(true);
-        extension.setMaxStackTraceDepth(5);
+        extension.setMaxStackTraceDepth(GradlDromusPluginTest.SHORT_STACK);
         
-        CustomTestListener customListener = new CustomTestListener(project, extension);
+        CustomTestListener customListener = new CustomTestListener(extension);
         assertNotNull("Custom listener should be created", customListener);
         assertFalse("Should have no tests initially", customListener.hasTests());
     }
@@ -72,8 +70,8 @@ public class CustomTestListenerTest {
         extension.setShowFullStackTraces(true);
         assertTrue("showFullStackTraces should be true", extension.isShowFullStackTraces());
         
-        extension.setMaxStackTraceDepth(3);
-        assertEquals("maxStackTraceDepth should be 3", 3, extension.getMaxStackTraceDepth());
+        extension.setMaxStackTraceDepth(SHORT_STACK);
+        assertEquals("maxStackTraceDepth should be 3", SHORT_STACK, extension.getMaxStackTraceDepth());
         
         extension.setPassSymbol("✅");
         assertEquals("passSymbol should be ✅", "✅", extension.getPassSymbol());
@@ -105,8 +103,8 @@ public class CustomTestListenerTest {
         CleanTerminalPrinter printer = new CleanTerminalPrinter(extension);
         
         // Test terminal width configuration
-        extension.setTerminalWidth(120);
-        assertEquals("Terminal width should be 120", 120, printer.getTerminalWidth());
+        extension.setTerminalWidth(CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH);
+        assertEquals("Terminal width should be 120", CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH, printer.getTerminalWidth());
         
         extension.setTerminalWidth(0);
         assertTrue("Should use default width when 0", printer.getTerminalWidth() > 0);
@@ -115,8 +113,8 @@ public class CustomTestListenerTest {
     @Test
     public void testMultipleListeners() {
         // Test that we can create multiple listeners
-        CustomTestListener listener1 = new CustomTestListener(project, extension);
-        CustomTestListener listener2 = new CustomTestListener(project, extension);
+        CustomTestListener listener1 = new CustomTestListener(extension);
+        CustomTestListener listener2 = new CustomTestListener(extension);
         
         assertNotNull("First listener should exist", listener1);
         assertNotNull("Second listener should exist", listener2);

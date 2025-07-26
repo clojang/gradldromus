@@ -1,6 +1,7 @@
 package io.github.clojang.gradldromus;
 
 public class GradlDromusExtension {
+    public static final int MAX_STACK_TRACE_DEPTH = 10;
     // Public fields for Kotlin DSL compatibility
     public boolean showModuleNames = true;
     public boolean showMethodNames = true;
@@ -8,7 +9,7 @@ public class GradlDromusExtension {
     public boolean useColors = true;
     public boolean showStandardStreams = false;
     public boolean suppressGradleOutput = false;
-    public int terminalWidth = 80;
+    public int terminalWidth = CleanTerminalPrinter.DEFAULT_TERM_SM_WIDTH;
     public String passSymbol = "💚";
     public String failSymbol = "💔";
     public String skipSymbol = "💤";
@@ -17,25 +18,17 @@ public class GradlDromusExtension {
     public boolean showExceptions = true;        // Show exception messages
     public boolean showStackTraces = false;     // Show stack traces (short form)
     public boolean showFullStackTraces = false; // Show full stack traces with all frames
-    public int maxStackTraceDepth = 10;         // Max number of stack trace frames to show (when not full)
+    public int maxStackTraceDepth = MAX_STACK_TRACE_DEPTH;
     
     // Keep getters for Java compatibility and internal use
     public boolean isShowModuleNames() {
         return showModuleNames;
     }
-    
-    public void setShowModuleNames(boolean showModuleNames) {
-        this.showModuleNames = showModuleNames;
-    }
-    
+
     public boolean isShowMethodNames() {
         return showMethodNames;
     }
-    
-    public void setShowMethodNames(boolean showMethodNames) {
-        this.showMethodNames = showMethodNames;
-    }
-    
+
     public boolean isShowTimings() {
         return showTimings;
     }
@@ -56,16 +49,8 @@ public class GradlDromusExtension {
         return showStandardStreams;
     }
     
-    public void setShowStandardStreams(boolean showStandardStreams) {
-        this.showStandardStreams = showStandardStreams;
-    }
-    
     public boolean isSuppressGradleOutput() {
         return suppressGradleOutput;
-    }
-    
-    public void setSuppressGradleOutput(boolean suppressGradleOutput) {
-        this.suppressGradleOutput = suppressGradleOutput;
     }
 
     public void setTerminalWidth(int terminalWidth) {

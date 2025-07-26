@@ -7,6 +7,9 @@ import java.io.PrintStream;
 import java.util.Scanner;
 
 public class CleanTerminalPrinter {
+    public static final int DEFAULT_TERM_SM_WIDTH = 80;
+    public static final int DEFAULT_TERM_LG_WIDTH = 120;
+
     private final GradlDromusExtension extension;
     private final Logger logger;
     
@@ -34,9 +37,13 @@ public class CleanTerminalPrinter {
             output.println(text);
         }
     }
-    
 
-    
+    public void printHeading(PrintStream output, AnsiColors colors, String chr, String color) {
+        synchronized (output) {
+            clearLine(output);
+            output.println(colors.colorize(chr.repeat(DEFAULT_TERM_SM_WIDTH), color));
+        }
+    }
     /**
      * Determine the terminal width for proper line clearing
      */
@@ -51,8 +58,7 @@ public class CleanTerminalPrinter {
         String columnsEnv = System.getenv("COLUMNS");
         if (columnsEnv != null) {
             try {
-                int width = Integer.parseInt(columnsEnv.trim());
-                return width;
+                return Integer.parseInt(columnsEnv.trim());
             } catch (NumberFormatException ignored) {}
         }
         
@@ -66,10 +72,12 @@ public class CleanTerminalPrinter {
                 return Integer.parseInt(colsStr);
             }
         } catch (Exception e) {
-            logger.warn("Could not determine terminal width, using default: 80", e);
+            logger.warn(
+                    "Could not determine terminal width, using default: {}",
+                    DEFAULT_TERM_SM_WIDTH, e);
         }
         
-        return 80; // Default width
+        return DEFAULT_TERM_SM_WIDTH;
     }
     
     /**

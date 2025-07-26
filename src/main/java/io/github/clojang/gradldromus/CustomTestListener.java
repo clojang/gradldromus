@@ -1,11 +1,11 @@
 package io.github.clojang.gradldromus;
 
-import org.gradle.api.Project;
-import org.gradle.api.tasks.testing.*;
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
+import org.gradle.api.tasks.testing.TestListener;
+import org.gradle.api.tasks.testing.TestDescriptor;
+import org.gradle.api.tasks.testing.TestResult;
 
-import java.util.*;
+import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -13,10 +13,22 @@ import java.io.PrintStream;
 import java.io.StringWriter;
 import java.io.PrintWriter;
 
-import static io.github.clojang.gradldromus.AnsiColors.*;
+import static io.github.clojang.gradldromus.AnsiColors.BOLD;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_YELLOW;
+import static io.github.clojang.gradldromus.AnsiColors.WHITE;
+import static io.github.clojang.gradldromus.AnsiColors.YELLOW;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_BLACK;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_GREEN;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_RED;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_CYAN;
+import static io.github.clojang.gradldromus.AnsiColors.RED;
+import static io.github.clojang.gradldromus.AnsiColors.BLUE;
+import static io.github.clojang.gradldromus.AnsiColors.GREEN;
+import static io.github.clojang.gradldromus.AnsiColors.CYAN;
 
 public class CustomTestListener implements TestListener {
-    private final Project project;
+    private static final double MILLISECONDS = 1000.0;
+    private static final int DOTS_PAD = 76;
     private final GradlDromusExtension extension;
     private final AnsiColors colors;
     private final CleanTerminalPrinter printer;
@@ -33,8 +45,7 @@ public class CustomTestListener implements TestListener {
     private final AtomicInteger totalFailed = new AtomicInteger(0);
     private final AtomicInteger totalSkipped = new AtomicInteger(0);
     
-    public CustomTestListener(Project project, GradlDromusExtension extension) {
-        this.project = project;
+    public CustomTestListener(GradlDromusExtension extension) {
         this.extension = extension;
         this.colors = new AnsiColors(extension.isUseColors());
         this.printer = new CleanTerminalPrinter(extension);
@@ -117,7 +128,7 @@ public class CustomTestListener implements TestListener {
             nameLength += className.substring(className.lastIndexOf('.') + 1).length() + 1;
         }
         nameLength += methodName.length() + 1;
-        int dotsNeeded = Math.max(1, 74 - nameLength); // this tends to give most results in under 80 characters
+        int dotsNeeded = Math.max(1, DOTS_PAD - nameLength); // this tends to give most results in under 80 characters
         outputStr.append(colors.colorize(".".repeat(dotsNeeded), BRIGHT_BLACK));
         
         // Status in brackets
@@ -263,14 +274,14 @@ public class CustomTestListener implements TestListener {
         
         printer.println(output, summary.toString());
         
-        printer.println(output, colors.colorize("Time: ", WHITE) + (totalTime / 1000.0) + "s");
+        printer.println(output, colors.colorize("Time: ", WHITE) + (totalTime / MILLISECONDS) + "s");
         
         if (totalFailed.get() == 0) {
             printer.println(output, "\n" + colors.colorize("✨ All tests passed!", BRIGHT_GREEN));
         } else {
             printer.println(output, "\n" + colors.colorize("❌ Some tests failed.", BRIGHT_RED));
         }
-
-        printer.println(output, colors.colorize("\n" + "=".repeat(78), BRIGHT_GREEN) + "\n");
+        printer.println(output, "");
+        printer.printHeading(output, colors, "=", BRIGHT_GREEN);
     }
 }

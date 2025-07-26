@@ -8,10 +8,8 @@ import org.gradle.api.tasks.testing.TestDescriptor;
 import org.gradle.api.tasks.testing.TestListener;
 import org.gradle.api.tasks.testing.TestResult;
 import org.gradle.api.tasks.testing.logging.TestLoggingContainer;
-import org.gradle.api.tasks.testing.logging.TestLogEvent;
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat;
 import org.gradle.api.logging.LogLevel;
-import org.gradle.api.logging.configuration.ConsoleOutput;
 
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -20,11 +18,13 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.github.clojang.gradldromus.AnsiColors.*;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_GREEN;
+import static io.github.clojang.gradldromus.AnsiColors.GREEN;
+import static io.github.clojang.gradldromus.AnsiColors.BRIGHT_BLACK;
 
 public class GradlDromusPlugin implements Plugin<Project> {
     // Use a map to track listeners per root project
-    private static final Map<Project, CustomTestListener> listeners = new ConcurrentHashMap<>();
+    private static final Map<Project, CustomTestListener> LISTENER_MAP = new ConcurrentHashMap<>();
 
     @Override
     public void apply(Project project) {
@@ -41,23 +41,22 @@ public class GradlDromusPlugin implements Plugin<Project> {
         PrintStream output = System.out;
         
         // Get or create the listener for this root project
-        CustomTestListener listener = listeners.computeIfAbsent(rootProject, p -> {
-            CustomTestListener newListener = new CustomTestListener(p, extension);
+        CustomTestListener listener = LISTENER_MAP.computeIfAbsent(rootProject, p -> {
+            CustomTestListener newListener = new CustomTestListener(extension);
 
             // Add a projects evaluated listener to print a greeting message
             p.getGradle().projectsEvaluated(result -> {
                 // Write a greeting message
                 Properties props = new Properties();
-                printer.println(output, "\n" + colors.colorize("=".repeat(78), BRIGHT_GREEN));
-                
                 // Try multiple locations for the properties file
                 String[] possiblePaths = {
                     "/io/github/clojang/gradldromus/plugin.properties",
                     "/plugin.properties",
                     "plugin.properties"
                 };
-
                 boolean loaded = false;
+                printer.println(output, "");
+                printer.printHeading(output, colors, "=", BRIGHT_GREEN);
                 for (String path : possiblePaths) {
                     try (InputStream in = getClass().getResourceAsStream(path)) {
                         if (in != null) {
@@ -79,17 +78,16 @@ public class GradlDromusPlugin implements Plugin<Project> {
                     String version = pkg != null ? pkg.getImplementationVersion() : "unknown";
                     printer.println(output, colors.colorize("Running tests with GradlDromus (version: " + version + ")", GREEN));
                 }
-                
-                printer.println(output, colors.colorize("-".repeat(78), BRIGHT_GREEN));
+                printer.printHeading(output, colors, "-", BRIGHT_GREEN);
             });
 
             // Add a build finished listener to print the final summary
             p.getGradle().buildFinished(result -> {
-                CustomTestListener l = listeners.get(p);
+                CustomTestListener l = LISTENER_MAP.get(p);
                 if (l != null && l.hasTests()) {
                     l.printFinalSummary();
                 }
-                listeners.remove(p); // Clean up
+                LISTENER_MAP.remove(p); // Clean up
             });
 
             return newListener;
@@ -119,9 +117,11 @@ public class GradlDromusPlugin implements Plugin<Project> {
             });
             
             testTask.doLast(task -> {
-                printer.println(output, "\n" + colors.colorize("-".repeat(78), BRIGHT_BLACK));
+                printer.println(output, "");
+                printer.printHeading(output, colors, "-", BRIGHT_BLACK);
                 // Restore original log level
                 LogLevel originalLevel = (LogLevel) task.getExtensions().getExtraProperties().get("originalLogLevel");
+                originalLevel = originalLevel != null ? originalLevel : LogLevel.LIFECYCLE;
                 project.getGradle().getStartParameter().setLogLevel(originalLevel);
             });
         });

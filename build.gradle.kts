@@ -13,6 +13,11 @@ plugins {
 group = "io.github.clojang"
 version = "0.3.0"
 
+// Make version catalog values available via ext properties
+ext {
+    set("checkstyleVersion", libs.versions.checkstyle.get())
+}
+
 // Configure SonarQube to avoid deprecated behavior
 sonar {
     properties {
@@ -22,7 +27,7 @@ sonar {
 
 // Configure Checkstyle
 checkstyle {
-    toolVersion = "10.12.4"
+    toolVersion = rootProject.ext["checkstyleVersion"] as String
     configFile = rootProject.file("config/checkstyle/checkstyle.xml")
     isIgnoreFailures = false
     maxWarnings = 0

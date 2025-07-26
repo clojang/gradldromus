@@ -12,23 +12,21 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
 public class GradlDromusPluginTest {
-    
+    public static final int SHORT_STACK = 5;
     @Rule
     public TemporaryFolder testProjectDir = new TemporaryFolder();
     
     private Project project;
     private final PrintStream originalOut = System.out;
     private final PrintStream originalErr = System.err;
-    private ByteArrayOutputStream testOut;
-    private ByteArrayOutputStream testErr;
     
     @Before
     public void setUp() {
+        ByteArrayOutputStream testOut = new ByteArrayOutputStream();
+        ByteArrayOutputStream testErr = new ByteArrayOutputStream();
         project = ProjectBuilder.builder().build();
         
         // Capture output for testing
-        testOut = new ByteArrayOutputStream();
-        testErr = new ByteArrayOutputStream();
         System.setOut(new PrintStream(testOut));
         System.setErr(new PrintStream(testErr));
     }
@@ -69,7 +67,7 @@ public class GradlDromusPluginTest {
         assert extension.isShowExceptions() : "showExceptions should default to true";
         assert !extension.isShowStackTraces() : "showStackTraces should default to false";
         assert !extension.isShowFullStackTraces() : "showFullStackTraces should default to false";
-        assert extension.getMaxStackTraceDepth() == 10 : "maxStackTraceDepth should default to 10";
+        assert extension.getMaxStackTraceDepth() == GradlDromusExtension.MAX_STACK_TRACE_DEPTH : "maxStackTraceDepth should default to 10";
         
         // Test symbols
         assert "💚".equals(extension.getPassSymbol()) : "passSymbol should default to 💚";
@@ -88,21 +86,21 @@ public class GradlDromusPluginTest {
         extension.setShowExceptions(false);
         extension.setShowStackTraces(true);
         extension.setShowFullStackTraces(true);
-        extension.setMaxStackTraceDepth(5);
+        extension.setMaxStackTraceDepth(SHORT_STACK);
         extension.setPassSymbol("✅");
         extension.setFailSymbol("❌");
         extension.setSkipSymbol("⏭");
-        extension.setTerminalWidth(120);
+        extension.setTerminalWidth(CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH);
         
         // Verify configuration
         assert !extension.isShowExceptions() : "showExceptions should be false";
         assert extension.isShowStackTraces() : "showStackTraces should be true";
         assert extension.isShowFullStackTraces() : "showFullStackTraces should be true";
-        assert extension.getMaxStackTraceDepth() == 5 : "maxStackTraceDepth should be 5";
+        assert extension.getMaxStackTraceDepth() == SHORT_STACK : "maxStackTraceDepth should be 5";
         assert "✅".equals(extension.getPassSymbol()) : "passSymbol should be ✅";
         assert "❌".equals(extension.getFailSymbol()) : "failSymbol should be ❌";
         assert "⏭".equals(extension.getSkipSymbol()) : "skipSymbol should be ⏭";
-        assert extension.getTerminalWidth() == 120 : "terminalWidth should be 120";
+        assert extension.getTerminalWidth() == CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH : "terminalWidth should be 120";
     }
     
     @org.junit.Test

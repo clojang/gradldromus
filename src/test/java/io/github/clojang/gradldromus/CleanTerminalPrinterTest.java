@@ -2,7 +2,8 @@ package io.github.clojang.gradldromus;
 
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -46,14 +47,14 @@ public class CleanTerminalPrinterTest {
         int width = printer.getTerminalWidth();
         assertTrue("Terminal width should be positive", width > 0);
         // Default should be 80 if no other source is available
-        assertEquals("Default width should be 80", 80, width);
+        assertEquals("Default width should be 80", CleanTerminalPrinter.DEFAULT_TERM_SM_WIDTH, width);
     }
     
     @Test
     public void testGetTerminalWidthFromExtension() {
-        extension.setTerminalWidth(120);
+        extension.setTerminalWidth(CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH);
         int width = printer.getTerminalWidth();
-        assertEquals("Width should match extension setting", 120, width);
+        assertEquals("Width should match extension setting", CleanTerminalPrinter.DEFAULT_TERM_LG_WIDTH, width);
     }
     
     @Test
