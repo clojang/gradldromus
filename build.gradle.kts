@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.18"
+version = "0.3.19"
 
 // Make version catalog values available via ext properties
 ext {
@@ -138,43 +138,6 @@ nexusPublishing {
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = project.group.toString()
-            artifactId = "gradldromus"
-            version = project.version.toString()
-            
-            from(components["java"])
-            
-            pom {
-                name.set("GradlDromus")
-                description.set("A Gradle plugin for GradlDromus functionality")
-                url.set("https://github.com/clojang/gradldromus")
-                
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-                
-                developers {
-                    developer {
-                        id.set("clojang")
-                        name.set("Clojang Team")
-                        email.set("team@clojang.io")
-                    }
-                }
-                
-                scm {
-                    connection.set("scm:git:git://github.com/clojang/gradldromus.git")
-                    developerConnection.set("scm:git:ssh://github.com:clojang/gradldromus.git")
-                    url.set("https://github.com/clojang/gradldromus/tree/main")
-                }
-            }
-        }
-    }
-    
     repositories {
         maven {
             name = "GitHubPackages"
@@ -182,6 +145,43 @@ publishing {
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
+// Configure the automatically created plugin publication
+afterEvaluate {
+    publishing {
+        publications {
+            // Configure the pluginMaven publication created by java-gradle-plugin
+            named<MavenPublication>("pluginMaven") {
+                pom {
+                    name.set("GradlDromus")
+                    description.set("A Gradle plugin for GradlDromus functionality")
+                    url.set("https://github.com/clojang/gradldromus")
+                    
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                    
+                    developers {
+                        developer {
+                            id.set("clojang")
+                            name.set("Clojang Team")
+                            email.set("team@clojang.io")
+                        }
+                    }
+                    
+                    scm {
+                        connection.set("scm:git:git://github.com/clojang/gradldromus.git")
+                        developerConnection.set("scm:git:ssh://github.com:clojang/gradldromus.git")
+                        url.set("https://github.com/clojang/gradldromus/tree/main")
+                    }
+                }
             }
         }
     }
@@ -196,7 +196,13 @@ signing {
     // Only configure signing if all required properties are present
     if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
         useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-        sign(publishing.publications["maven"])
+        
+        // Sign all publications after they're created
+        afterEvaluate {
+            publishing.publications.forEach { publication ->
+                sign(publication)
+            }
+        }
     } else {
         println("Signing configuration not found - skipping artifact signing")
     }

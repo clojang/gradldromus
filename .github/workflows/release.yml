@@ -194,7 +194,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: |
-          ./gradlew publishAllPublicationsToGitHubPackagesRepository
+          ./gradlew publishPluginMavenPublicationToGitHubPackagesRepository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
