@@ -1,6 +1,10 @@
 # GradlDromus
 
-A beautiful, clean test output formatter for Gradle that replaces the default messy test logging with elegant, readable results.
+[![Build Status][gh-actions-badge]][gh-actions]
+
+[![Project Logo][logo]][logo-large]
+
+*A beautiful, clean test output formatter for Gradle that replaces the default messy test logging with elegant, readable results.*
 
 ## Features
 
@@ -184,7 +188,9 @@ The plugin uses itself for test output - so you'll see GradlDromus in action whi
 
 ## License
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+© 2025, Clojang. All rights reserved.
+
+Licensed under the Apache License, Version 2.0. See `LICENSE` file for details.
 
 ## Inspiration
 
@@ -195,3 +201,11 @@ The name combines "Gradle" with "dromus" (from Greek, meaning "running" or "cour
 ---
 
 **Made with 💚 by developers who care about clean output**
+
+[//]: ---Named-Links---
+
+[logo]: resources/images/logo.jpg
+[logo-large]: resources/images/logo-large.jpg
+[screenshot]: resources/images/demo-screenshot.png
+[gh-actions-badge]: https://github.com/clojang/gradldromus/workflows/CI/badge.svg
+[gh-actions]: https://github.com/clojang/gradldromus/actions?query=workflow%3ACI
