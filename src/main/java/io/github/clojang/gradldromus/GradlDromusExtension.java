@@ -7,11 +7,17 @@ public class GradlDromusExtension {
     public boolean showTimings = true;
     public boolean useColors = true;
     public boolean showStandardStreams = false;
-    public boolean suppressGradleOutput = false; // New option
-    public int terminalWidth = 80; // Default terminal width
+    public boolean suppressGradleOutput = false;
+    public int terminalWidth = 80;
     public String passSymbol = "💚";
     public String failSymbol = "💔";
     public String skipSymbol = "💤";
+    
+    // New exception and stack trace options
+    public boolean showExceptions = true;        // Show exception messages
+    public boolean showStackTraces = false;     // Show stack traces (short form)
+    public boolean showFullStackTraces = false; // Show full stack traces with all frames
+    public int maxStackTraceDepth = 10;         // Max number of stack trace frames to show (when not full)
     
     // Keep getters for Java compatibility and internal use
     public boolean isShowModuleNames() {
@@ -92,5 +98,38 @@ public class GradlDromusExtension {
     
     public void setSkipSymbol(String skipSymbol) {
         this.skipSymbol = skipSymbol;
+    }
+    
+    // New getters and setters for exception handling
+    public boolean isShowExceptions() {
+        return showExceptions;
+    }
+    
+    public void setShowExceptions(boolean showExceptions) {
+        this.showExceptions = showExceptions;
+    }
+    
+    public boolean isShowStackTraces() {
+        return showStackTraces;
+    }
+    
+    public void setShowStackTraces(boolean showStackTraces) {
+        this.showStackTraces = showStackTraces;
+    }
+    
+    public boolean isShowFullStackTraces() {
+        return showFullStackTraces;
+    }
+    
+    public void setShowFullStackTraces(boolean showFullStackTraces) {
+        this.showFullStackTraces = showFullStackTraces;
+    }
+    
+    public int getMaxStackTraceDepth() {
+        return maxStackTraceDepth;
+    }
+    
+    public void setMaxStackTraceDepth(int maxStackTraceDepth) {
+        this.maxStackTraceDepth = maxStackTraceDepth;
     }
 }

@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.PrintStream;
+import java.io.StringWriter;
+import java.io.PrintWriter;
 
 import static io.github.clojang.gradldromus.AnsiColors.*;
 
@@ -150,11 +152,100 @@ public class CustomTestListener implements TestListener {
         // Print the test result using clean printer
         printer.println(output, outputStr.toString());
         
-        // Print failure details on the next line(s) if needed
+        // Print failure details if needed and configured
         if (result.getResultType() == TestResult.ResultType.FAILURE) {
-            for (Throwable exception : result.getExceptions()) {
-                printer.println(output, colors.colorize("    → " + exception.getMessage(), RED));
+            printFailureDetails(result);
+        }
+    }
+    
+    private void printFailureDetails(TestResult result) {
+        List<Throwable> exceptions = result.getExceptions();
+        if (exceptions.isEmpty()) {
+            return;
+        }
+        
+        for (Throwable exception : exceptions) {
+            // Always show the exception message if showExceptions is true (default)
+            if (extension.isShowExceptions()) {
+                String message = getExceptionMessage(exception);
+                if (message != null && !message.trim().isEmpty()) {
+                    printer.println(output, colors.colorize("    → " + message, RED));
+                }
             }
+            
+            // Show stack traces if requested
+            if (extension.isShowStackTraces() || extension.isShowFullStackTraces()) {
+                printStackTrace(exception);
+            }
+        }
+    }
+    
+    private String getExceptionMessage(Throwable exception) {
+        String message = exception.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            // If no message, use the exception class name
+            return exception.getClass().getSimpleName();
+        }
+        return message;
+    }
+    
+    private void printStackTrace(Throwable exception) {
+        if (extension.isShowFullStackTraces()) {
+            // Show complete stack trace
+            printFullStackTrace(exception);
+        } else if (extension.isShowStackTraces()) {
+            // Show limited stack trace
+            printLimitedStackTrace(exception);
+        }
+    }
+    
+    private void printFullStackTrace(Throwable exception) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        exception.printStackTrace(pw);
+        String fullTrace = sw.toString();
+        
+        String[] lines = fullTrace.split("\\n");
+        for (String line : lines) {
+            if (!line.trim().isEmpty()) {
+                printer.println(output, colors.colorize("      " + line.trim(), RED));
+            }
+        }
+    }
+    
+    private void printLimitedStackTrace(Throwable exception) {
+        StackTraceElement[] stackTrace = exception.getStackTrace();
+        if (stackTrace.length == 0) {
+            return;
+        }
+        
+        // Print the exception class and message
+        printer.println(output, colors.colorize("      " + exception.getClass().getName() + 
+            (exception.getMessage() != null ? ": " + exception.getMessage() : ""), RED));
+        
+        // Print limited number of stack trace elements
+        int limit = Math.min(stackTrace.length, extension.getMaxStackTraceDepth());
+        for (int i = 0; i < limit; i++) {
+            StackTraceElement element = stackTrace[i];
+            String stackLine = String.format("        at %s.%s(%s:%d)",
+                element.getClassName(),
+                element.getMethodName(),
+                element.getFileName() != null ? element.getFileName() : "Unknown Source",
+                element.getLineNumber());
+            printer.println(output, colors.colorize(stackLine, RED));
+        }
+        
+        // Show "... X more" if there are more stack trace elements
+        if (stackTrace.length > limit) {
+            int remaining = stackTrace.length - limit;
+            printer.println(output, colors.colorize("        ... " + remaining + " more", RED));
+        }
+        
+        // Handle caused by exceptions
+        Throwable cause = exception.getCause();
+        if (cause != null && cause != exception) {
+            printer.println(output, colors.colorize("      Caused by: ", RED));
+            printLimitedStackTrace(cause);
         }
     }
 
