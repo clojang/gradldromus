@@ -1,4 +1,5 @@
 import org.gradle.api.plugins.quality.CheckstyleExtension
+import java.util.Properties
 
 plugins {
     id("java")
@@ -61,23 +62,43 @@ sourceSets {
     }
 }
 
-// Generate plugin properties file
+// Generate plugin properties file with merging capability
 tasks.register("generatePluginProperties") {
     val outputDir = layout.buildDirectory.dir("generated/resources/main/io/github/clojang/gradldromus")
     val outputFile = outputDir.map { it.file("plugin.properties") }
+    val sourcePropertiesFile = file("src/main/resources/io/github/clojang/gradldromus/plugin.properties")
     
     inputs.property("version", project.version)
+    if (sourcePropertiesFile.exists()) {
+        inputs.file(sourcePropertiesFile)
+    }
     outputs.file(outputFile)
     
     doLast {
         val dir = outputDir.get().asFile
         dir.mkdirs()
         val file = outputFile.get().asFile
-        file.writeText("""
-            plugin.name=GradlDromus
-            plugin.version=${project.version}
-        """.trimIndent())
-        println("Generated plugin.properties at: ${file}")
+        
+        // Start with base properties
+        val properties = Properties()
+        
+        // Load existing properties if they exist
+        if (sourcePropertiesFile.exists()) {
+            sourcePropertiesFile.inputStream().use { input ->
+                properties.load(input)
+            }
+        }
+        
+        // Add/override with generated properties
+        properties.setProperty("plugin.name", "GradlDromus")
+        properties.setProperty("plugin.version", project.version.toString())
+        
+        // Write merged properties
+        file.outputStream().use { output ->
+            properties.store(output, "Generated plugin properties - merged with source")
+        }
+        
+        println("Generated merged plugin.properties at: ${file}")
     }
 }
 
@@ -96,6 +117,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
     withSourcesJar()
     withJavadocJar()
+}
+
+// Configure sourcesJar to exclude the original properties file since we're using the merged one
+tasks.named<Jar>("sourcesJar") {
+    dependsOn("generatePluginProperties")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // Configure Nexus publishing for Maven Central
@@ -168,7 +195,7 @@ signing {
     
     useInMemoryPgpKeys(
         System.getenv("SIGNING_KEY_ID") ?: signingKeyId,
-        System.getenv("SIGNING_SECRET_KEY_RING_FILE") ?: signingKey,
+        System.getenv("SIGNING_KEY") ?: signingKey,
         System.getenv("SIGNING_PASSWORD") ?: signingPassword
     )
     
