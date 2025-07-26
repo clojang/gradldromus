@@ -1,9 +1,10 @@
 import org.gradle.api.plugins.quality.CheckstyleExtension
-import org.gradle.api.plugins.quality.Checkstyle
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     id("java")
+    id("maven-publish")
+    id("java-gradle-plugin")
+    id("checkstyle")
     id("org.sonarqube")
     id("com.github.ben-manes.versions")
     id("org.owasp.dependencycheck")
@@ -19,23 +20,19 @@ sonar {
     }
 }
 
-// Make version catalog values available to subprojects via ext properties
-ext {
-    set("testcontainersBom", libs.testcontainers.bom.get())
-    set("junitJupiter", libs.junit.jupiter.get())
-    set("mockitoCore", libs.mockito.core.get())
-    set("assertjCore", libs.assertj.core.get())
-    set("testcontainersCore", libs.testcontainers.core.get())
-    set("checkstyleVersion", libs.versions.checkstyle.get())
-}
-
-repositories {
-    mavenCentral()
+// Configure Checkstyle
+checkstyle {
+    toolVersion = "10.12.4"
+    configFile = rootProject.file("config/checkstyle/checkstyle.xml")
+    isIgnoreFailures = false
+    maxWarnings = 0
+    maxErrors = 0
 }
 
 dependencies {
+    // Only the dependencies actually used
     implementation(gradleApi())
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit4)
 }
 
 gradlePlugin {
@@ -47,15 +44,8 @@ gradlePlugin {
     }
 }
 
-// Configure source sets for demo tests
+// Configure main source set resources
 sourceSets {
-    create("demo") {
-        java {
-            srcDir("src/demo/java")
-        }
-        compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
-        runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
-    }
     main {
         resources {
             srcDir(layout.buildDirectory.dir("generated/resources/main"))
@@ -63,136 +53,7 @@ sourceSets {
     }
 }
 
-// Make demo source set extend test configurations
-configurations {
-    getByName("demoImplementation") {
-        extendsFrom(configurations.getByName("testImplementation"))
-    }
-    getByName("demoRuntimeOnly") {
-        extendsFrom(configurations.getByName("testRuntimeOnly"))
-    }
-}
-
-// Create demo test tasks with different configurations
-tasks.register<Test>("demoTestMinimal") {
-    description = "Run demo tests with minimal output (exceptions only)"
-    group = "demo"
-    
-    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
-    classpath = sourceSets.getByName("demo").runtimeClasspath
-    
-    systemProperty("gradldromus.showExceptions", "true")
-    systemProperty("gradldromus.showStackTraces", "false") 
-    systemProperty("gradldromus.showFullStackTraces", "false")
-    systemProperty("gradldromus.showTimings", "true")
-}
-
-tasks.register<Test>("demoTestStackTraces") {
-    description = "Run demo tests with limited stack traces"
-    group = "demo"
-    
-    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
-    classpath = sourceSets.getByName("demo").runtimeClasspath
-    
-    systemProperty("gradldromus.showExceptions", "true")
-    systemProperty("gradldromus.showStackTraces", "true")
-    systemProperty("gradldromus.showFullStackTraces", "false")
-    systemProperty("gradldromus.maxStackTraceDepth", "5")
-    systemProperty("gradldromus.showTimings", "true")
-}
-
-tasks.register<Test>("demoTestFullStackTraces") {
-    description = "Run demo tests with full stack traces"
-    group = "demo"
-    
-    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
-    classpath = sourceSets.getByName("demo").runtimeClasspath
-    
-    systemProperty("gradldromus.showExceptions", "true")
-    systemProperty("gradldromus.showStackTraces", "false")
-    systemProperty("gradldromus.showFullStackTraces", "true")
-    systemProperty("gradldromus.showTimings", "true")
-}
-
-tasks.register<Test>("demoTestNoExceptions") {
-    description = "Run demo tests with no exception details (pass/fail only)"
-    group = "demo"
-    
-    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
-    classpath = sourceSets.getByName("demo").runtimeClasspath
-    
-    systemProperty("gradldromus.showExceptions", "false")
-    systemProperty("gradldromus.showStackTraces", "false")
-    systemProperty("gradldromus.showFullStackTraces", "false")
-    systemProperty("gradldromus.showTimings", "false")
-}
-
-tasks.register<Test>("demoTestCustomSymbols") {
-    description = "Run demo tests with custom symbols and colors"
-    group = "demo"
-    
-    testClassesDirs = sourceSets.getByName("demo").output.classesDirs
-    classpath = sourceSets.getByName("demo").runtimeClasspath
-    
-    systemProperty("gradldromus.passSymbol", "✅")
-    systemProperty("gradldromus.failSymbol", "❌")
-    systemProperty("gradldromus.skipSymbol", "⏭")
-    systemProperty("gradldromus.showExceptions", "true")
-    systemProperty("gradldromus.showStackTraces", "true")
-    systemProperty("gradldromus.maxStackTraceDepth", "3")
-}
-
-// Convenience task to run all demo variations
-tasks.register("demoAll") {
-    description = "Run all demo test variations"
-    group = "demo"
-    
-    dependsOn(
-        "demoTestMinimal",
-        "demoTestStackTraces", 
-        "demoTestFullStackTraces",
-        "demoTestNoExceptions",
-        "demoTestCustomSymbols"
-    )
-}
-
-// Make demo tests depend on compiling the demo sources
-tasks.named("demoTestMinimal") { dependsOn("compileDemoJava") }
-tasks.named("demoTestStackTraces") { dependsOn("compileDemoJava") }
-tasks.named("demoTestFullStackTraces") { dependsOn("compileDemoJava") }
-tasks.named("demoTestNoExceptions") { dependsOn("compileDemoJava") }
-tasks.named("demoTestCustomSymbols") { dependsOn("compileDemoJava") }
-
-// More explicit resource processing
-tasks.processResources {
-    // First, ensure all resources are copied
-    from("src/main/resources")
-    
-    // Then handle the specific properties file with expansion
-    filesMatching("**/plugin.properties") {
-        expand("version" to project.version)
-        println("Processing properties file: $path with version: ${project.version}")
-    }
-    
-    // Debug: print what files are being processed
-    doFirst {
-        println("ProcessResources task starting...")
-        println("Source directories: ${sourceSets.main.get().resources.srcDirs}")
-        println("Output directory: ${destinationDir}")
-    }
-    
-    doLast {
-        println("ProcessResources task completed")
-        // List the files that were actually processed
-        fileTree(destinationDir).visit {
-            if (!isDirectory) {
-                println("Processed: $relativePath")
-            }
-        }
-    }
-}
-
-// Alternative approach: create the properties file directly
+// Generate plugin properties file
 tasks.register("generatePluginProperties") {
     val outputDir = layout.buildDirectory.dir("generated/resources/main/io/github/clojang/gradldromus")
     val outputFile = outputDir.map { it.file("plugin.properties") }
@@ -212,8 +73,14 @@ tasks.register("generatePluginProperties") {
     }
 }
 
+// Resource processing with property expansion
 tasks.processResources {
     dependsOn("generatePluginProperties")
+    from("src/main/resources")
+    
+    filesMatching("**/plugin.properties") {
+        expand("version" to project.version)
+    }
 }
 
 publishing {
@@ -238,19 +105,16 @@ tasks.withType<ProcessResources> {
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-// Configure OWASP Dependency Check for root project
+// Configure OWASP Dependency Check
 dependencyCheck {
-    // Configuration for OWASP Dependency Check
-    formats = listOf("HTML", "JSON", "XML")  // Use string format names
+    formats = listOf("HTML", "JSON", "XML")
     suppressionFiles = listOf("${rootProject.projectDir}/config/owasp-suppressions.xml")
     analyzers.assemblyEnabled = false
 
-    // NVD API Configuration - try multiple sources
     val apiKey = System.getenv("NVD_API_KEY")
         ?: project.findProperty("nvdApiKey") as String?
         ?: ""
 
-    // Debug print (remove after testing)
     if (apiKey.isNotEmpty()) {
         println("NVD API Key found: ${apiKey.take(4)}...")
     } else {
@@ -258,17 +122,10 @@ dependencyCheck {
     }
 
     nvd.apiKey = apiKey
-
-    // Clear the old datafeed URL
     nvd.datafeedUrl = ""
-
-    // Retry configuration with increased delays
     nvd.maxRetryCount = 5
-    nvd.delay = 10000  // 10 seconds between retries (increased from 5)
+    nvd.delay = 10000
 
-    // Fail build on CVSS score 7 or higher
     failBuildOnCVSS = 7.0f
-
-    // IMPORTANT: Scan all subprojects - use project paths as strings
     scanProjects = allprojects.map { it.path }
 }
