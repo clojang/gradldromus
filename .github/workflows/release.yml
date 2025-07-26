@@ -147,11 +147,16 @@ jobs:
 
       - name: Import GPG key
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import --quiet
           
           # List keys to verify import
           echo "Imported GPG keys:"
           gpg --list-secret-keys --keyid-format LONG
+          
+          # Export the key to verify it's available
+          GPG_KEY_ID="${{ secrets.GPG_KEY_ID }}"
+          echo "Verifying key $GPG_KEY_ID is available..."
+          gpg --list-secret-keys $GPG_KEY_ID
 
       - name: Publish to Maven Central
         run: |

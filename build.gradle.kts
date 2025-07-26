@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.17"
+version = "0.3.18"
 
 // Make version catalog values available via ext properties
 ext {
@@ -189,17 +189,28 @@ publishing {
 
 // Configure signing
 signing {
-    val signingKeyId: String? by project
-    val signingKey: String? by project
-    val signingPassword: String? by project
+    val signingKeyId = System.getenv("SIGNING_KEY_ID") ?: project.findProperty("signing.keyId") as String?
+    val signingKey = System.getenv("SIGNING_KEY") ?: project.findProperty("signing.secretKeyRingFile") as String?
+    val signingPassword = System.getenv("SIGNING_PASSWORD") ?: project.findProperty("signing.password") as String?
     
-    useInMemoryPgpKeys(
-        System.getenv("SIGNING_KEY_ID") ?: signingKeyId,
-        System.getenv("SIGNING_KEY") ?: signingKey,
-        System.getenv("SIGNING_PASSWORD") ?: signingPassword
-    )
-    
-    sign(publishing.publications["maven"])
+    // Only configure signing if all required properties are present
+    if (!signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()) {
+        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+        sign(publishing.publications["maven"])
+    } else {
+        println("Signing configuration not found - skipping artifact signing")
+    }
+}
+
+// Only require signing for non-snapshot versions and when publishing to Maven Central
+tasks.withType<Sign>().configureEach {
+    onlyIf {
+        val signingKeyId = System.getenv("SIGNING_KEY_ID") ?: project.findProperty("signing.keyId") as String?
+        val signingKey = System.getenv("SIGNING_KEY") ?: project.findProperty("signing.secretKeyRingFile") as String?
+        val signingPassword = System.getenv("SIGNING_PASSWORD") ?: project.findProperty("signing.password") as String?
+        
+        !signingKeyId.isNullOrEmpty() && !signingKey.isNullOrEmpty() && !signingPassword.isNullOrEmpty()
+    }
 }
 
 // Handle duplicate resources
