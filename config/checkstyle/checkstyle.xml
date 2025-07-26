@@ -36,9 +36,10 @@
     <module name="TreeWalker">
         <!-- Checks for Naming Conventions.                  -->
         <!-- See http://checkstyle.org/config_naming.html -->
-        <!-- Removed ConstantName - allow flexible naming -->
+        <module name="ConstantName"/>
         <module name="LocalFinalVariableName"/>
         <module name="LocalVariableName"/>
+        <module name="MagicNumber"/>
         <module name="MemberName"/>
         <module name="MethodName"/>
         <module name="PackageName"/>
@@ -49,9 +50,10 @@
         <!-- Checks for imports                              -->
         <!-- See http://checkstyle.org/config_import.html -->
         <!-- Removed AvoidStarImport - allow star imports -->
+        <module name="AvoidStarImport"/>
         <module name="IllegalImport"/> <!-- defaults to sun.* packages -->
         <module name="RedundantImport"/>
-        <!-- Removed UnusedImports - allow unused imports for clarity -->
+        <module name="UnusedImports"/>
 
         <!-- Checks for Size Violations.                    -->
         <!-- See http://checkstyle.org/config_sizes.html -->

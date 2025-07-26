@@ -5,7 +5,6 @@
 
 <suppressions>
     <!-- Suppress certain checks for test files -->
-    <suppress checks="MagicNumber" files=".*Test\.java"/>
     <suppress checks="DesignForExtension" files=".*Test\.java"/>
     <suppress checks="FinalParameters" files=".*Test\.java"/>
     
@@ -15,9 +14,6 @@
     <!-- Allow utility classes in test packages -->
     <suppress checks="HideUtilityClassConstructor" files=".*Test\.java"/>
     
-    <!-- Allow longer lines in generated or configuration files -->
-    <suppress checks="LineLength" files=".*\.properties"/>
-    
     <!-- Relax rules for Gradle plugin extension classes (designed to be configured by users) -->
     <suppress checks="DesignForExtension" files=".*Extension\.java"/>
     <suppress checks="FinalParameters" files=".*Extension\.java"/>
@@ -26,27 +22,7 @@
     <!-- Relax rules for listener classes (implement Gradle interfaces) -->
     <suppress checks="DesignForExtension" files=".*Listener\.java"/>
     <suppress checks="FinalParameters" files=".*Listener\.java"/>
-    
-    <!-- Relax rules for main plugin class -->
-    <suppress checks="DesignForExtension" files=".*Plugin\.java"/>
-    <suppress checks="FinalParameters" files=".*Plugin\.java"/>
-    <suppress checks="ConstantName" files=".*Plugin\.java"/>
-    
-    <!-- Relax rules for utility classes -->
-    <suppress checks="DesignForExtension" files=".*Colors\.java"/>
-    <suppress checks="DesignForExtension" files=".*Printer\.java"/>
-    <suppress checks="FinalParameters" files=".*Colors\.java"/>
-    <suppress checks="FinalParameters" files=".*Printer\.java"/>
-    
-    <!-- Allow star imports for commonly used packages -->
-    <suppress checks="AvoidStarImport" files=".*\.java"/>
-    
-    <!-- Allow unused imports (sometimes needed for clarity) -->
-    <suppress checks="UnusedImports" files=".*\.java"/>
-    
-    <!-- Allow magic numbers in reasonable contexts -->
-    <suppress checks="MagicNumber" files=".*\.java"/>
-    
+
     <!-- Allow missing switch defaults when enum handling is complete -->
     <suppress checks="MissingSwitchDefault" files=".*\.java"/>
     
