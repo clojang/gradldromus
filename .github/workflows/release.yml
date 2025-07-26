@@ -124,7 +124,7 @@ jobs:
     name: Publish to Maven Central
     runs-on: ubuntu-latest
     needs: [ validate, release ]
-    if: github.repository == 'clojang/clojog'
+    if: github.repository == 'clojang/gradldromus'
 
     steps:
       - name: Checkout code
