@@ -28,7 +28,7 @@ com.example.MyTest > testSomethingElse() FAILED
 **After (GradlDromus):**
 ```
 ==============================================================================
-Running tests with GradlDromus (version: 0.2.0)
+Running tests with GradlDromus (version: 0.3.0)
 ------------------------------------------------------------------------------
 :modules:common:monitoring:test
     StructuredLoggerTest.shouldLogInfoMessage() ............................💚 (115ms)
@@ -51,7 +51,7 @@ Time: 0.207s
 
 ```kotlin
 plugins {
-    id("io.github.clojang.gradldromus") version "0.2.0"
+    id("io.github.clojang.gradldromus") version "0.3.0"
 }
 ```
 
@@ -63,7 +63,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath("io.github.clojang:gradldromus:0.2.0")
+        classpath("io.github.clojang:gradldromus:0.3.0")
     }
 }
 
