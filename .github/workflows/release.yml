@@ -87,7 +87,9 @@ jobs:
         
     - name: Build release artifacts
       run: |
-        ./gradlew clean build publishToMavenLocal -x test
+        # Clear any Gradle configuration cache
+        rm -rf .gradle
+        ./gradlew clean build publishToMavenLocal -x test --info
         
     - name: Create release notes
       id: release_notes
