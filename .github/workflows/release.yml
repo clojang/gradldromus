@@ -268,8 +268,9 @@ jobs:
             GRADLE_CMD="gradle"
           fi
           
-          # Publish to GitHub Packages using the repository defined in build.gradle.kts
-          $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository
+          # For GitHub Packages, we don't need signing, so we can exclude signing tasks
+          echo "Publishing to GitHub Packages (without signing)..."
+          $GRADLE_CMD publishMavenPublicationToGitHubPackagesRepository -x signMavenPublication --info
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "io.github.clojang"
-version = "0.3.9"
+version = "0.3.10"
 
 // Make version catalog values available via ext properties
 ext {
