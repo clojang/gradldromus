@@ -1,4 +1,4 @@
-.PHONY: build clean test install
+.PHONY: build clean test install version release
 
 default: build
 
@@ -24,3 +24,15 @@ freshest-test:
 
 install: clean build
 	./gradlew publishToMavenLocal
+
+version:
+	@./gradlew properties | grep '^version:' | cut -d' ' -f2
+
+release:
+	@version=$$(./gradlew properties | grep '^version:' | cut -d' ' -f2) && \
+	git tag -a "v$$version" -m "Release version $$version" && \
+	echo "Tagged release v$$version"
+
+publish: clean build release
+	@git push origin main && \
+	git push origin main --tags
