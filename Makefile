@@ -33,6 +33,9 @@ release:
 	git tag -a "v$$version" -m "Release version $$version" && \
 	echo "Tagged release v$$version"
 
-publish: clean build release
-	@git push origin main && \
+publish: clean build release just-publish
+
+just-publish:
+	@git pull origin main --rebase && \
+	git push origin main && \
 	git push origin main --tags
