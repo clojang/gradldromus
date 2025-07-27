@@ -1,7 +1,6 @@
 package io.github.clojang.gradldromus;
 
-import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
+import java.util.logging.Logger;
 
 import java.io.PrintStream;
 import java.util.Scanner;
@@ -27,7 +26,7 @@ public class CleanTerminalPrinter {
      */
     public CleanTerminalPrinter(GradlDromusExtension extension) {
         this.extension = extension;
-        this.logger = Logging.getLogger(CleanTerminalPrinter.class);
+        this.logger = Logger.getLogger(CleanTerminalPrinter.class.getName());
     }
     
     /**
@@ -101,9 +100,8 @@ public class CleanTerminalPrinter {
                 return Integer.parseInt(colsStr);
             }
         } catch (Exception e) {
-            logger.warn(
-                    "Could not determine terminal width, using default: {}",
-                    DEFAULT_TERM_SM_WIDTH, e);
+            logger.warning(
+                    "Could not determine terminal width, using default: " + DEFAULT_TERM_SM_WIDTH + ". Error: " + e.getMessage());
         }
         
         return DEFAULT_TERM_SM_WIDTH;
